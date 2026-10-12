@@ -1,0 +1,90 @@
+.ficha {
+  width: 260px;
+  font-family: var(--f-ui);
+}
+
+.fichaCabeza {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 36px 10px 12px;
+  border-radius: var(--r-m) var(--r-m) 0 0;
+}
+
+.fichaCodigo {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border-radius: 50%;
+  border: 3px solid;
+  background: #fff;
+  font-family: var(--f-dato);
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.fichaTitulo {
+  margin: 0 !important;
+  font-weight: 800;
+  font-size: var(--t-m);
+  line-height: 1.2;
+}
+
+.fichaSub {
+  margin: 0 !important;
+  font-size: var(--t-xs);
+  color: var(--texto-3);
+}
+
+.fichaDatos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+  margin: 0;
+  padding: 10px 12px 4px;
+}
+
+.fichaDatos dt {
+  font-size: var(--t-2xs);
+  color: var(--texto-3);
+}
+
+.fichaDatos dd {
+  margin: 0;
+  font-weight: 700;
+  font-size: var(--t-s);
+}
+
+.fichaNivel {
+  font-weight: 500;
+  color: var(--texto-3);
+}
+
+.fichaGrafo {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: var(--t-xs);
+  font-weight: 800;
+}
+
+.fichaDelito {
+  display: flex;
+  flex-direction: column;
+  margin: 0 !important;
+  padding: 6px 12px 12px;
+  font-size: var(--t-xs);
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.fichaDelito span {
+  font-weight: 400;
+  font-size: var(--t-2xs);
+  color: var(--texto-3);
+}

@@ -1,0 +1,129 @@
+/*
+  TTR_ · Tokens de diseño
+  -----------------------
+  Paleta definida para el proyecto (no cambiar sin actualizar DESIGN.md):
+    #34374C  pizarra  · superficies oscuras elevadas, texto secundario
+    #2C2E3E  noche    · barra superior, placas sobre el mapa
+    #EE2B47  señal    · acción principal, hotspots, estado activo
+    #F6F6F6  niebla   · fondo de trabajo
+    #FFF9F2  papel    · paneles y superficies de lectura
+    #000000  tinta    · títulos y cifras
+*/
+:root {
+  /* Paleta base */
+  --ttr-tinta: #000000;
+  --ttr-noche: #2c2e3e;
+  --ttr-pizarra: #34374c;
+  --ttr-senal: #ee2b47;
+  --ttr-niebla: #f6f6f6;
+  --ttr-papel: #fff9f2;
+
+  /* Roles de superficie */
+  --fondo: var(--ttr-niebla);
+  --superficie: var(--ttr-papel);
+  --superficie-2: #ffffff;
+  --superficie-hundida: #efeeec;
+  --cromo: var(--ttr-noche);
+  --cromo-2: var(--ttr-pizarra);
+
+  /* Texto sobre claro */
+  --texto: var(--ttr-tinta);
+  --texto-2: var(--ttr-pizarra);
+  --texto-3: #5f6276; /* 5.6:1 sobre papel */
+  --texto-4: #8a8c9b; /* solo para decoración o texto grande */
+
+  /* Texto sobre oscuro */
+  --texto-inv: var(--ttr-papel);
+  --texto-inv-2: rgba(255, 249, 242, 0.74);
+  --texto-inv-3: rgba(255, 249, 242, 0.52);
+
+  /* Bordes */
+  --borde: rgba(44, 46, 62, 0.13);
+  --borde-2: rgba(44, 46, 62, 0.24);
+  --borde-inv: rgba(255, 249, 242, 0.14);
+
+  /* Acento */
+  --senal: var(--ttr-senal);
+  /* Relleno de botones con texto blanco: el rojo de marca da 4.1:1 con blanco;
+     este tono casi idéntico llega a 4.6:1 (WCAG AA) */
+  --senal-accion: #e3213e;
+  --senal-hover: #d81b39;
+  --senal-press: #c8102e;
+  --senal-texto: #c8102e; /* rojo para texto pequeño sobre claro (5.4:1) */
+  --senal-suave: rgba(238, 43, 71, 0.1);
+  --senal-borde: rgba(238, 43, 71, 0.36);
+
+  /* Estados (siempre acompañados de ícono y texto) */
+  --ok: #1d7a4e;
+  --ok-suave: rgba(29, 122, 78, 0.1);
+  --aviso: #8a5a00;
+  --aviso-suave: rgba(184, 122, 0, 0.12);
+  --error: var(--senal-texto);
+  --error-suave: var(--senal-suave);
+
+  /* Colores de los grafos (1 a 5). Validados para daltonismo hasta 4 grafos;
+     siempre van con su número como segunda codificación. */
+  --grafo-1: #1f5fd0;
+  --grafo-2: #b87a00;
+  --grafo-3: #13907a;
+  --grafo-4: #8e3b9e;
+  --grafo-5: #4e6b1f;
+
+  /* Gravedad del delito (rampa de un solo tono) */
+  --grav-0: #9a9cab;
+  --grav-1: #f5a3af;
+  --grav-2: #f06a7e;
+  --grav-3: #ee2b47;
+  --grav-4: #a3122a;
+
+  /* Tipografía */
+  --f-ui: 'Overpass Variable', 'Overpass', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --f-dato: 'Overpass Mono Variable', 'Overpass Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  --t-2xs: 0.6875rem; /* 11 */
+  --t-xs: 0.75rem; /* 12 */
+  --t-s: 0.8125rem; /* 13 */
+  --t-m: 0.9375rem; /* 15 */
+  --t-l: 1.125rem; /* 18 */
+  --t-xl: 1.375rem; /* 22 */
+  --t-2xl: 1.75rem; /* 28 */
+  --t-3xl: 2.5rem; /* 40 */
+
+  /* Espaciado (retícula de 4 px) */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 64px;
+
+  /* Radios: controles < paneles < hojas */
+  --r-s: 6px;
+  --r-m: 10px;
+  --r-l: 14px;
+  --r-pill: 999px;
+
+  /* Elevación */
+  --sombra-1: 0 1px 2px rgba(0, 0, 0, 0.06), 0 2px 6px rgba(44, 46, 62, 0.07);
+  --sombra-2: 0 2px 4px rgba(0, 0, 0, 0.06), 0 10px 28px rgba(44, 46, 62, 0.16);
+  --sombra-3: 0 6px 12px rgba(0, 0, 0, 0.1), 0 24px 56px rgba(44, 46, 62, 0.28);
+
+  /* Movimiento: una curva firma, tres duraciones */
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --ease-in: cubic-bezier(0.3, 0, 1, 1);
+  --d-1: 140ms;
+  --d-2: 240ms;
+  --d-3: 420ms;
+
+  /* Estructura */
+  --alto-barra: 60px;
+  --ancho-panel: 400px;
+  --foco: 0 0 0 2px var(--ttr-papel), 0 0 0 4px var(--ttr-senal);
+}
+
+@media (max-width: 767px) {
+  :root {
+    --alto-barra: 56px;
+  }
+}

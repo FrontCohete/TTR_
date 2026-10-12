@@ -1,0 +1,94 @@
+.seccion {
+  padding: 18px 20px;
+  border-top: 1px solid var(--borde);
+}
+
+.seccion:first-child {
+  border-top: none;
+}
+
+.cabeza {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 28px;
+}
+
+.h,
+.alternar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--t-m);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.alternar {
+  flex: 1;
+  min-height: 36px;
+  margin: -6px -8px;
+  padding: 6px 8px;
+  border: none;
+  border-radius: var(--r-s);
+  background: transparent;
+  text-align: left;
+}
+
+.alternar:hover {
+  background: rgba(44, 46, 62, 0.05);
+}
+
+.icono {
+  color: var(--texto-3);
+  flex: none;
+}
+
+.titulo {
+  padding-top: 2px;
+}
+
+.nota {
+  margin-left: auto;
+  font-weight: 500;
+  font-size: var(--t-xs);
+  color: var(--texto-3);
+  padding-top: 2px;
+}
+
+.chevron {
+  flex: none;
+  color: var(--texto-3);
+  transition: transform var(--d-2) var(--ease);
+}
+
+.alternar .nota + .chevron,
+.alternar .titulo + .chevron {
+  margin-left: auto;
+}
+
+.alternar .nota {
+  margin-left: auto;
+}
+
+.alternar .nota + .chevron {
+  margin-left: 4px;
+}
+
+.girado {
+  transform: rotate(180deg);
+}
+
+.accion {
+  flex: none;
+}
+
+.plegado {
+  overflow: hidden;
+}
+
+.cuerpo {
+  padding-top: 12px;
+}

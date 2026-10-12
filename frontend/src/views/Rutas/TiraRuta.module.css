@@ -1,0 +1,150 @@
+.fila {
+  --tam: 28px;
+  --tramo: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.s {
+  --tam: 22px;
+  --tramo: 6px;
+}
+
+.tenue {
+  opacity: 0.5;
+}
+
+.etiqueta {
+  flex: none;
+  width: 34px;
+  font-family: var(--f-dato);
+  font-size: var(--t-xs);
+  color: var(--texto-3);
+  text-align: right;
+}
+
+.valor {
+  flex: none;
+  min-width: 66px;
+  font-family: var(--f-dato);
+  font-size: var(--t-xs);
+  font-weight: 600;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.desplazable {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  padding: 3px 3px 4px;
+}
+
+.tira {
+  display: flex;
+  align-items: center;
+  width: max-content;
+  padding-right: 18px;
+}
+
+.conTramos {
+  --tramo: 36px;
+  padding-bottom: 14px;
+}
+
+.estacion {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: var(--tam);
+  height: var(--tam);
+  flex: none;
+  border-radius: 50%;
+  border: 3px solid var(--c);
+  background: #fff;
+  color: var(--ttr-noche);
+  font-family: var(--f-dato);
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: -0.04em;
+  transition:
+    background-color var(--d-2) var(--ease),
+    border-color var(--d-2) var(--ease),
+    color var(--d-2) var(--ease),
+    box-shadow var(--d-2) var(--ease);
+}
+
+.s .estacion {
+  border-width: 2px;
+  font-size: 9px;
+}
+
+/* Cruce: de dónde viene cada gen */
+.deA {
+  background: var(--c);
+  color: var(--tc, #fff);
+}
+
+.deB {
+  background: #fff;
+  border-color: var(--ttr-noche);
+  color: var(--ttr-noche);
+}
+
+.marcada {
+  box-shadow:
+    0 0 0 2px #fff,
+    0 0 0 5px var(--senal);
+}
+
+.enSegmento:not(.deA):not(.deB) {
+  background: var(--c);
+  color: var(--tc, #fff);
+}
+
+.tramo {
+  position: relative;
+  width: var(--tramo);
+  height: 4px;
+  flex: none;
+  background: var(--c);
+  opacity: 0.55;
+}
+
+.s .tramo {
+  height: 3px;
+}
+
+.tramoSegmento {
+  opacity: 1;
+}
+
+.km {
+  position: absolute;
+  top: 9px;
+  left: 50%;
+  translate: -50% 0;
+  font-family: var(--f-dato);
+  font-size: 10px;
+  color: var(--texto-3);
+  white-space: nowrap;
+}
+
+.regreso {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: calc(var(--tramo) + 10px);
+  background: repeating-linear-gradient(90deg, var(--c) 0 4px, transparent 4px 7px);
+}
+
+.iconoRegreso {
+  position: absolute;
+  right: -14px;
+  color: var(--c);
+  opacity: 1;
+}

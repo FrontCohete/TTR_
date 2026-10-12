@@ -1,0 +1,130 @@
+.nav {
+  width: min(460px, 100%);
+}
+
+.contenedor {
+  position: relative;
+}
+
+.linea {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+
+/* Vía: de la primera a la última estación */
+.via {
+  position: absolute;
+  left: 12.5%;
+  right: 12.5%;
+  top: 11px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 249, 242, 0.18);
+  pointer-events: none;
+}
+
+.recorrido {
+  position: absolute;
+  inset: 0;
+  border-radius: 2px;
+  background: var(--senal);
+  transform-origin: left center;
+}
+
+.parada {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+
+.enlace {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  min-width: 64px;
+  padding: 3px 6px 2px;
+  border-radius: var(--r-s);
+  color: var(--texto-inv-2);
+  text-decoration: none;
+  transition: color var(--d-1) var(--ease);
+}
+
+a.enlace:hover {
+  color: var(--texto-inv);
+}
+
+a.enlace:hover .estacion {
+  transform: scale(1.15);
+}
+
+.enlace:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--senal);
+}
+
+.bloqueado {
+  color: var(--texto-inv-3);
+  cursor: not-allowed;
+}
+
+.estacion {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 249, 242, 0.42);
+  background: var(--cromo);
+  transition:
+    transform var(--d-2) var(--ease),
+    background-color var(--d-2) var(--ease),
+    border-color var(--d-2) var(--ease);
+}
+
+.nombre {
+  font-size: var(--t-xs);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.01em;
+}
+
+.parada[data-estado='pasada'] .estacion {
+  border-color: var(--senal);
+  background: var(--senal);
+  transform: scale(0.78);
+}
+
+.parada[data-estado='actual'] .estacion {
+  border-color: #fff;
+  background: var(--senal);
+  transform: scale(1.12);
+  box-shadow: 0 0 0 3px rgba(238, 43, 71, 0.35);
+}
+
+.parada[data-estado='actual'] .enlace {
+  color: var(--texto-inv);
+}
+
+.parada[data-estado='actual'] .nombre {
+  font-weight: 800;
+}
+
+@media (max-width: 767px) {
+  .nav {
+    width: 100%;
+  }
+  .enlace {
+    min-width: 0;
+    padding: 2px 2px;
+  }
+  .parada:not([data-estado='actual']) .nombre {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+  }
+  .parada[data-estado='actual'] .nombre {
+    white-space: nowrap;
+  }
+}

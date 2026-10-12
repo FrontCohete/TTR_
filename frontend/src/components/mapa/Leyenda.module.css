@@ -1,0 +1,85 @@
+.leyenda {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--r-m);
+  background: rgba(44, 46, 62, 0.94);
+  color: var(--texto-inv);
+  box-shadow: var(--sombra-2);
+  font-size: var(--t-xs);
+  max-width: 220px;
+}
+
+.bloque + .bloque {
+  padding-top: 10px;
+  border-top: 1px solid var(--borde-inv);
+}
+
+.titulo {
+  margin-bottom: 6px;
+  font-weight: 700;
+  color: var(--texto-inv-2);
+}
+
+.lista {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px 12px;
+}
+
+.lista li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.punto {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  flex: none;
+}
+
+.estacion {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  border-radius: 50%;
+  border: 3px solid var(--senal);
+  background: #fff;
+}
+
+.numero {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  flex: none;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  color: #fff;
+  font-weight: 800;
+  font-size: 10px;
+}
+
+.rampa {
+  display: grid;
+  gap: 4px;
+}
+
+.degradado {
+  display: block;
+  height: 8px;
+  width: 180px;
+  max-width: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #f5a3af, #f06a7e, #ee2b47, #a3122a);
+}
+
+.extremos {
+  display: flex;
+  justify-content: space-between;
+  color: var(--texto-inv-2);
+}

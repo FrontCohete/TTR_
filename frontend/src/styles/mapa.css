@@ -1,0 +1,219 @@
+/* Ajustes globales de Leaflet para que el mapa hable el mismo idioma visual de TTR_ */
+
+.leaflet-container {
+  background: #e9e8e4;
+  font-family: var(--f-ui);
+  font-size: var(--t-s);
+  outline: none;
+}
+
+.leaflet-container .leaflet-control-attribution {
+  background: rgba(255, 249, 242, 0.86);
+  color: var(--texto-3);
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: var(--r-s) 0 0 0;
+}
+
+.leaflet-container .leaflet-control-attribution a {
+  color: var(--texto-2);
+}
+
+/* Teselas del mapa base, un poco desaturadas para que los datos manden */
+.ttr-teselas {
+  filter: grayscale(0.55) contrast(0.96) brightness(1.02);
+}
+
+/* Controles de zoom como placas oscuras */
+.leaflet-bar {
+  border: none !important;
+  box-shadow: var(--sombra-2) !important;
+  border-radius: var(--r-m) !important;
+  overflow: hidden;
+}
+
+.leaflet-bar a,
+.leaflet-bar a:hover {
+  width: 40px !important;
+  height: 40px !important;
+  line-height: 40px !important;
+  background: var(--cromo) !important;
+  color: var(--texto-inv) !important;
+  border-bottom: 1px solid var(--borde-inv) !important;
+  font-size: 20px !important;
+  font-weight: 400;
+}
+
+.leaflet-bar a:hover {
+  background: var(--cromo-2) !important;
+}
+
+.leaflet-bar a.leaflet-disabled {
+  color: var(--texto-inv-3) !important;
+  background: var(--cromo) !important;
+}
+
+.leaflet-control-scale-line {
+  background: rgba(255, 249, 242, 0.86);
+  border-color: var(--ttr-pizarra);
+  color: var(--texto-2);
+  font-family: var(--f-dato);
+  font-size: 10px;
+}
+
+/* Tooltips y popups */
+.leaflet-tooltip.ttr-tooltip {
+  background: var(--cromo);
+  color: var(--texto-inv);
+  border: none;
+  border-radius: var(--r-s);
+  box-shadow: var(--sombra-2);
+  font-family: var(--f-ui);
+  font-size: var(--t-xs);
+  font-weight: 600;
+  padding: 4px 8px;
+}
+
+.leaflet-tooltip.ttr-tooltip::before {
+  display: none;
+}
+
+.leaflet-popup.ttr-popup .leaflet-popup-content-wrapper {
+  background: var(--superficie);
+  color: var(--texto);
+  border-radius: var(--r-m);
+  box-shadow: var(--sombra-3);
+  padding: 0;
+}
+
+.leaflet-popup.ttr-popup .leaflet-popup-content {
+  margin: 0;
+  font-family: var(--f-ui);
+  font-size: var(--t-s);
+  line-height: 1.45;
+  width: auto !important;
+  min-width: 220px;
+}
+
+.leaflet-popup.ttr-popup .leaflet-popup-tip {
+  background: var(--superficie);
+}
+
+.leaflet-popup.ttr-popup a.leaflet-popup-close-button {
+  color: var(--texto-3);
+  width: 32px;
+  height: 32px;
+  font-size: 20px;
+  line-height: 30px;
+}
+
+/* Estación: marcador de hotspot con forma de estación de línea */
+.ttr-estacion {
+  --c: var(--senal);
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid var(--c);
+  color: var(--ttr-noche);
+  font-family: var(--f-dato);
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: -0.04em;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition:
+    border-color var(--d-2) var(--ease),
+    transform var(--d-1) var(--ease),
+    background-color var(--d-2) var(--ease);
+}
+
+.ttr-estacion[data-activa='true'] {
+  background: var(--c);
+  color: var(--tc, #fff);
+  transform: scale(1.18);
+}
+
+.ttr-estacion[data-tenue='true'] {
+  opacity: 0.55;
+}
+
+.leaflet-marker-icon:hover .ttr-estacion {
+  transform: scale(1.12);
+}
+
+/* Etiqueta de código junto a la estación (zoom cercano) */
+.ttr-etiqueta {
+  position: absolute;
+  left: calc(100% + 4px);
+  top: 50%;
+  transform: translateY(-50%);
+  white-space: nowrap;
+  background: rgba(44, 46, 62, 0.92);
+  color: var(--texto-inv);
+  font-family: var(--f-ui);
+  font-weight: 600;
+  font-size: 11px;
+  padding: 1px 6px 0;
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+/* Agente en simulación */
+.ttr-agente {
+  --c: var(--grafo-1);
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: var(--c);
+  color: var(--tc, #fff);
+  border: 3px solid #fff;
+  font-weight: 800;
+  font-size: 13px;
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(0, 0, 0, 0.15);
+}
+
+.ttr-agente::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 2px solid var(--c);
+  animation: ttr-onda 1.8s var(--ease) infinite;
+  pointer-events: none;
+}
+
+.ttr-agente[data-detenido='true']::after {
+  animation: none;
+  opacity: 0;
+}
+
+@keyframes ttr-onda {
+  from {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  to {
+    transform: scale(2.1);
+    opacity: 0;
+  }
+}
+
+.ttr-icono-limpio {
+  background: none !important;
+  border: none !important;
+}
+
+/* En móvil, los controles inferiores del mapa suben por encima de la hoja del panel */
+@media (max-width: 767px) {
+  .leaflet-bottom {
+    bottom: var(--hoja-visible, 0px);
+    transition: bottom var(--d-2) var(--ease);
+  }
+}

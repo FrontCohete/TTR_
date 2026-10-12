@@ -1,0 +1,27 @@
+# --- Secretos: NUNCA al repositorio ---
+.env
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+
+# --- Frontend ---
+node_modules/
+frontend/dist/
+
+# --- Datos y salidas que se regeneran ---
+backend/cargas/
+backend/resultados/
+*.csv
+*.xlsx
+*.xls
+*.parquet
+*.dump
+mapa_*.html
+
+# --- Sistema y OneDrive ---
+Thumbs.db
+desktop.ini
+.DS_Store

@@ -1,0 +1,428 @@
+.analizar {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+}
+
+.areaMapa {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+}
+
+.cargandoMapa {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  translate: -50% 0;
+  z-index: 800;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: var(--r-pill);
+  background: var(--cromo);
+  color: var(--texto-inv);
+  font-size: var(--t-xs);
+  font-weight: 600;
+  box-shadow: var(--sombra-2);
+  pointer-events: none;
+}
+
+.giro {
+  animation: girar 0.9s linear infinite;
+}
+
+@keyframes girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.leyendaLugar {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 800;
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+
+.botonLeyenda {
+  height: 36px;
+  padding: 2px 14px 0;
+  border: none;
+  border-radius: var(--r-pill);
+  background: var(--cromo);
+  color: var(--texto-inv);
+  font-weight: 700;
+  font-size: var(--t-xs);
+  box-shadow: var(--sombra-2);
+}
+
+.errorFlotante {
+  position: absolute;
+  left: 50%;
+  bottom: 24px;
+  translate: -50% 0;
+  z-index: 900;
+  width: min(440px, calc(100% - 32px));
+  box-shadow: var(--sombra-3);
+  border-radius: var(--r-m);
+}
+
+/* ---------- Panel ---------- */
+.resumen {
+  display: grid;
+  gap: 12px;
+}
+
+.resumenCabeza {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.resumenTitulo {
+  font-size: var(--t-xl);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.resumenFecha {
+  font-size: var(--t-xs);
+  color: var(--texto-3);
+  white-space: nowrap;
+}
+
+.cifras {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.cifras dt {
+  font-size: var(--t-xs);
+  color: var(--texto-3);
+}
+
+.cifras dd {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
+  font-size: var(--t-xl);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.delta {
+  padding: 2px 6px 1px;
+  border-radius: 4px;
+  background: var(--senal-suave);
+  color: var(--senal-texto);
+  font-size: var(--t-xs);
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.parametrosHdbscan {
+  padding: 4px 20px 14px;
+  font-size: var(--t-xs);
+  color: var(--texto-3);
+}
+
+.ayuda {
+  margin-bottom: 14px;
+  font-size: var(--t-s);
+  color: var(--texto-2);
+  line-height: 1.45;
+}
+
+.campo {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.etiquetaCampo {
+  font-size: var(--t-xs);
+  font-weight: 700;
+  color: var(--texto-2);
+}
+
+.pistaCampo {
+  font-size: var(--t-xs);
+  color: var(--texto-3);
+}
+
+.subcontrol {
+  padding: 0 0 6px 0;
+}
+
+.resultadoParticion {
+  margin-top: 14px;
+  padding: 12px;
+  border-radius: var(--r-m);
+  background: var(--superficie-2);
+  border: 1px solid var(--borde);
+}
+
+.resultadoCabeza {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: var(--t-xs);
+  font-weight: 700;
+  color: var(--texto-2);
+}
+
+.modularidad {
+  font-weight: 500;
+  color: var(--texto-3);
+  cursor: help;
+}
+
+.listaGrafos {
+  display: grid;
+  gap: 4px;
+}
+
+.listaGrafos li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 30px;
+}
+
+.numeroGrafo {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  flex: none;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px var(--borde-2);
+  color: #fff;
+  font-size: var(--t-xs);
+  font-weight: 800;
+}
+
+.nombreGrafo {
+  font-weight: 700;
+  font-size: var(--t-s);
+}
+
+.nodosGrafo {
+  margin-left: auto;
+  font-size: var(--t-xs);
+  color: var(--texto-3);
+}
+
+.notaCambio {
+  margin-top: 8px;
+  font-size: var(--t-xs);
+  color: var(--aviso);
+}
+
+.rejillaCampos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.campoNumero {
+  display: grid;
+  gap: 4px;
+}
+
+.entrada {
+  width: 100%;
+  height: 38px;
+  padding: 2px 10px 0;
+  border: 1px solid var(--borde-2);
+  border-radius: var(--r-s);
+  background: var(--superficie-2);
+  font-family: var(--f-dato);
+  font-size: var(--t-s);
+  transition: border-color var(--d-1) var(--ease);
+}
+
+.entrada:hover {
+  border-color: var(--ttr-pizarra);
+}
+
+.entrada:focus-visible {
+  outline: none;
+  border-color: var(--senal);
+  box-shadow: 0 0 0 3px var(--senal-suave);
+}
+
+.ordenLista {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.listaHotspots {
+  display: grid;
+  gap: 2px;
+  margin: 0 -8px;
+}
+
+.filaHotspot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  padding: 6px 8px;
+  border: none;
+  border-radius: var(--r-s);
+  background: transparent;
+  text-align: left;
+  transition: background-color var(--d-1) var(--ease);
+}
+
+.filaHotspot:hover {
+  background: rgba(44, 46, 62, 0.05);
+}
+
+.filaActiva,
+.filaActiva:hover {
+  background: var(--senal-suave);
+}
+
+.filaHotspot:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--senal);
+}
+
+.estacionLista {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border-radius: 50%;
+  border: 3px solid;
+  background: #fff;
+  font-family: var(--f-dato);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: -0.04em;
+}
+
+.textoHotspot {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.codigoHotspot {
+  font-weight: 700;
+  font-size: var(--t-s);
+}
+
+.coloniaHotspot {
+  font-size: var(--t-xs);
+  color: var(--texto-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.medidasHotspot {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  width: 72px;
+  flex: none;
+}
+
+.puntosHotspot {
+  font-size: var(--t-s);
+  font-weight: 700;
+}
+
+.barraHotspot {
+  display: block;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(44, 46, 62, 0.1);
+  overflow: hidden;
+}
+
+.barraHotspot span {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+}
+
+.botonGenerar {
+  flex: 1;
+}
+
+/* ---------- Estado vacío ---------- */
+.vacio {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  padding: 24px;
+}
+
+.vacioCaja {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  max-width: 440px;
+  text-align: center;
+}
+
+.vacioIcono {
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: var(--cromo);
+  color: var(--texto-inv);
+}
+
+.vacioTitulo {
+  font-size: var(--t-2xl);
+  font-weight: 800;
+}
+
+.vacioTexto {
+  color: var(--texto-2);
+}
+
+@media (max-width: 767px) {
+  .leyendaLugar {
+    top: 10px;
+    left: 10px;
+  }
+  .cargandoMapa {
+    top: 12px;
+    left: auto;
+    right: 10px;
+    translate: none;
+  }
+  .errorFlotante {
+    bottom: calc(var(--hoja-visible, 180px) + 12px);
+  }
+}

@@ -1,0 +1,20 @@
+# Credenciales
+.env
+
+# Entornos virtuales
+.venv/
+venv/
+
+# Python
+__pycache__/
+*.pyc
+
+# Datos pesados (se descargan aparte)
+*.csv
+*.xlsx
+*.parquet
+database/fuentes/
+
+# Node / React
+node_modules/
+dist/

@@ -1,0 +1,54 @@
+.enlace {
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 6px;
+  margin-left: -6px;
+  border-radius: var(--r-s);
+  text-decoration: none;
+  color: inherit;
+}
+
+.enlace:focus-visible {
+  outline: none;
+  box-shadow: var(--foco);
+}
+
+.marca {
+  display: inline-flex;
+  align-items: baseline;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1;
+  color: var(--texto-inv);
+}
+
+.m {
+  font-size: 24px;
+}
+
+.l {
+  font-size: 56px;
+  letter-spacing: -0.04em;
+}
+
+.cursor {
+  display: inline-block;
+  width: 0.56em;
+  height: 0.13em;
+  margin-left: 0.08em;
+  background: var(--senal);
+  border-radius: 1px;
+  animation: parpadeo 1.15s steps(1, end) infinite;
+}
+
+@keyframes parpadeo {
+  0%,
+  68% {
+    opacity: 1;
+  }
+  69%,
+  100% {
+    opacity: 0;
+  }
+}

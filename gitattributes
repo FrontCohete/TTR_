@@ -1,0 +1,6 @@
+# Normaliza los finales de línea entre Windows y otros sistemas
+* text=auto
+*.ps1 text eol=crlf
+*.png binary
+*.jpg binary
+*.dump binary
