@@ -1,20 +1,29 @@
-# Credenciales
+# --- Secretos: NUNCA al repositorio ---
 .env
 
-# Entornos virtuales
+# --- Python ---
+__pycache__/
+*.py[cod]
 .venv/
 venv/
+.pytest_cache/
 
-# Python
-__pycache__/
-*.pyc
-
-# Datos pesados (se descargan aparte)
-*.csv
-*.xlsx
-*.parquet
-database/fuentes/
-
-# Node / React
+# --- Frontend ---
 node_modules/
 dist/
+
+# --- Datos y salidas que se regeneran ---
+backend/cargas/
+backend/resultados/
+database/fuentes/
+*.csv
+*.xlsx
+*.xls
+*.parquet
+*.dump
+mapa_*.html
+
+# --- Sistema y OneDrive ---
+Thumbs.db
+desktop.ini
+.DS_Store
