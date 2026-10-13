@@ -13,7 +13,8 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from app.basedatos import engine
 from app.errores import registrar_manejadores
-from app.rutas import cargas, mapa, analisis
+
+from app.rutas import cargas, mapa, analisis, particiones
 from app.servicios import procesamiento
 from fastapi.middleware.gzip import GZipMiddleware
 
@@ -51,6 +52,7 @@ registrar_manejadores(app)
 app.include_router(mapa.router)
 app.include_router(cargas.router)
 app.include_router(analisis.router)
+app.include_router(particiones.router)
 
 
 @app.get("/", include_in_schema=False)
