@@ -47,6 +47,27 @@ const tramosDe = (perm, distancia, cerrada) => {
   return t
 }
 
+/** Los dos torneos (A y B) que eligieron a los padres del hijo en la posición h */
+const torneosDe = (ops, h) => ops.torneos.filter((t) => t.hijo === h)
+
+/**
+ * Elitismo: las rutas con origen "elite" pasan intactas de la generación anterior, sin torneo,
+ * cruce ni mutación. Por eso el navegador de hijos recorre solo `operaciones.cruces`.
+ */
+function NotaElite({ actual }) {
+  const elites = actual.individuos.filter((x) => x.origen === 'elite')
+  if (!elites.length) return null
+  const lista = elites.map((e) => `#${e.posicion}`).join(', ')
+  const previas = elites.map((e) => `#${e.padre_1}`).join(', ')
+  return (
+    <p className={s.notaPequena}>
+      {elites.length === 1 ? `La ruta ${lista} no se forma así: es la ` : `Las rutas ${lista} no se forman así: son la `}
+      <strong>élite</strong>, {elites.length === 1 ? 'una copia intacta de la mejor ruta' : 'copias intactas de las mejores rutas'}{' '}
+      de la generación anterior ({previas}).
+    </p>
+  )
+}
+
 /** Deshace la mutación para obtener el hijo tal como salió del cruce */
 const antesDeMutar = (perm, mut) => {
   const [a, b] = mut.posiciones
@@ -80,6 +101,9 @@ export default function DetalleEtapa({
 
   const listo = actual && actual.numero === pos.gen && (pos.gen === 0 || (previa && previa.numero === pos.gen - 1))
   const P = parametros?.tam_poblacion ?? 0
+  // Índice dentro de los hijos con torneo y cruce (la élite no cuenta)
+  const nHijos = actual?.operaciones?.cruces?.length ?? 0
+  const k = Math.min(hijo, Math.max(0, nHijos - 1))
 
   let contenido
   if (rapido) {
@@ -109,7 +133,7 @@ export default function DetalleEtapa({
       <SeleccionAzar
         actual={actual}
         previa={previa}
-        hijo={hijo}
+        hijo={k}
         setHijo={setHijo}
         color={color}
         K={parametros.tam_torneo}
@@ -120,7 +144,7 @@ export default function DetalleEtapa({
       <Torneo
         actual={actual}
         previa={previa}
-        hijo={hijo}
+        hijo={k}
         setHijo={setHijo}
         info={info}
         color={color}
@@ -132,7 +156,7 @@ export default function DetalleEtapa({
       <Cruce
         actual={actual}
         previa={previa}
-        hijo={hijo}
+        hijo={k}
         setHijo={setHijo}
         info={info}
         color={color}
@@ -311,9 +335,8 @@ function Evaluacion({ actual, info, color, distancia, cerrada }) {
 
 // ---------------------------------------------------------------- 3 · Selección al azar
 function SeleccionAzar({ actual, previa, hijo, setHijo, color, K }) {
-  const P = actual.individuos.length
-  const tA = actual.operaciones.torneos[hijo * 2]
-  const tB = actual.operaciones.torneos[hijo * 2 + 1]
+  const ops = actual.operaciones
+  const [tA, tB] = torneosDe(ops, ops.cruces[hijo].hijo)
   const enA = new Set(tA.participantes)
   const enB = new Set(tB.participantes)
   const min = Math.min(...previa.individuos.map((x) => x.distancia))
@@ -324,7 +347,7 @@ function SeleccionAzar({ actual, previa, hijo, setHijo, color, K }) {
         Para formar cada hijo se toman <strong>dos grupos de {K} rutas al azar</strong> de la generación{' '}
         {fmtEntero(previa.numero)}. Cada grupo competirá en un torneo. Una misma ruta puede salir elegida varias veces.
       </p>
-      <Navegador indice={hijo} total={P} alCambiar={setHijo} etiqueta="Hijo" />
+      <Navegador indice={hijo} total={ops.cruces.length} alCambiar={setHijo} etiqueta="Hijo" />
       <div className={s.poblacion} role="list" aria-label={`Población de la generación ${previa.numero}`}>
         {previa.individuos.map((ind, i) => {
           const a = enA.has(i)
@@ -357,21 +380,23 @@ function SeleccionAzar({ actual, previa, hijo, setHijo, color, K }) {
         </p>
       </div>
       <p className={s.notaPequena}>El tono de cada ficha indica su distancia: más oscuro, ruta más corta.</p>
+      <NotaElite actual={actual} />
     </>
   )
 }
 
 // ---------------------------------------------------------------- 4 · Torneo
 function Torneo({ actual, previa, hijo, setHijo, info, color, cerrada }) {
-  const P = actual.individuos.length
-  const torneos = [actual.operaciones.torneos[hijo * 2], actual.operaciones.torneos[hijo * 2 + 1]]
+  const ops = actual.operaciones
+  const h = ops.cruces[hijo].hijo
+  const torneos = torneosDe(ops, h)
   return (
     <>
       <p className={s.explicacion}>
-        En cada torneo <strong>gana la ruta más corta</strong> del grupo. Los dos ganadores serán los padres del hijo{' '}
-        {fmtEntero(hijo + 1)}.
+        En cada torneo <strong>gana la ruta más corta</strong> del grupo. Los dos ganadores serán los padres del hijo #
+        {h}.
       </p>
-      <Navegador indice={hijo} total={P} alCambiar={setHijo} etiqueta="Hijo" />
+      <Navegador indice={hijo} total={ops.cruces.length} alCambiar={setHijo} etiqueta="Hijo" />
       <div className={s.torneos}>
         {torneos.map((t, k) => (
           <div key={k} className={s.torneo}>
@@ -411,18 +436,20 @@ function Torneo({ actual, previa, hijo, setHijo, info, color, cerrada }) {
           </div>
         ))}
       </div>
+      <NotaElite actual={actual} />
     </>
   )
 }
 
 // ---------------------------------------------------------------- 5 · Cruce
 function Cruce({ actual, previa, hijo, setHijo, info, color, cerrada, parametros }) {
-  const P = actual.individuos.length
+  const nHijos = actual.operaciones.cruces.length
   const c = actual.operaciones.cruces[hijo]
+  const h = c.hijo
   const A = previa.individuos[c.padres[0]].permutacion
   const B = previa.individuos[c.padres[1]].permutacion
-  const mut = actual.operaciones.mutaciones.find((m) => m.individuo === hijo)
-  const resultado = mut ? antesDeMutar(actual.individuos[hijo].permutacion, mut) : actual.individuos[hijo].permutacion
+  const mut = actual.operaciones.mutaciones.find((m) => m.individuo === h)
+  const resultado = mut ? antesDeMutar(actual.individuos[h].permutacion, mut) : actual.individuos[h].permutacion
   const aplicados = actual.operaciones.cruces.filter((x) => x.aplicado !== false && x.puntos_corte).length
   const origen = c.puntos_corte
     ? resultado.map((_, i) => (i >= c.puntos_corte[0] && i < c.puntos_corte[1] ? 'a' : 'b'))
@@ -445,7 +472,7 @@ function Cruce({ actual, previa, hijo, setHijo, info, color, cerrada, parametros
           </>
         )}
       </p>
-      <Navegador indice={hijo} total={P} alCambiar={setHijo} etiqueta="Hijo" />
+      <Navegador indice={hijo} total={nHijos} alCambiar={setHijo} etiqueta="Hijo" />
       {c.puntos_corte ? (
         <div className={s.cruce}>
           <TiraRuta
@@ -473,7 +500,7 @@ function Cruce({ actual, previa, hijo, setHijo, info, color, cerrada, parametros
             cerrada={cerrada}
             origen={origen}
             etiqueta="Hijo"
-            valor={`#${hijo}`}
+            valor={`#${h}`}
             animar
           />
           <p className={s.leyendaCruce}>
@@ -492,8 +519,9 @@ function Cruce({ actual, previa, hijo, setHijo, info, color, cerrada, parametros
         </div>
       )}
       <p className={s.notaPequena}>
-        En esta generación se cruzaron {fmtEntero(aplicados)} de {fmtEntero(P)} hijos.
+        En esta generación se cruzaron {fmtEntero(aplicados)} de {fmtEntero(nHijos)} hijos.
       </p>
+      <NotaElite actual={actual} />
     </>
   )
 }
@@ -576,7 +604,8 @@ function Mutacion({ actual, indice, setIndice, info, color, cerrada, parametros 
         </Boton>
       </div>
       <p className={s.notaPequena}>
-        En esta generación {plural(muts.length, 'hijo mutó', 'hijos mutaron')} de {fmtEntero(actual.individuos.length)}.
+        En esta generación {plural(muts.length, 'hijo mutó', 'hijos mutaron')} de {fmtEntero(actual.operaciones.cruces.length)}.
+        {actual.individuos.some((x) => x.origen === 'elite') && ' La élite nunca muta.'}
       </p>
     </>
   )
@@ -587,15 +616,17 @@ function EvaluacionGen({ actual, resumen, resumenPrevio, info, color, cerrada })
   const mejor = actual.individuos.reduce((m, x) => (x.distancia < m.distancia ? x : m), actual.individuos[0])
   const delta = resumenPrevio ? resumen.mejor_fitness - resumenPrevio.mejor_fitness : null
   const origenes = useMemo(() => {
-    const c = { cruce: 0, mutacion: 0, aleatorio: 0 }
+    const c = { cruce: 0, mutacion: 0, aleatorio: 0, elite: 0 }
     actual.individuos.forEach((x) => (c[x.origen] = (c[x.origen] ?? 0) + 1))
     return c
   }, [actual])
   return (
     <>
       <p className={s.explicacion}>
-        Se calcula la distancia de los {fmtEntero(actual.individuos.length)} hijos ({fmtEntero(origenes.cruce)} por
-        cruce y {fmtEntero(origenes.mutacion)} con mutación). Esta población es la base de la siguiente generación.
+        Se calcula la distancia de las {fmtEntero(actual.individuos.length)} rutas ({fmtEntero(origenes.cruce)} por
+        cruce, {fmtEntero(origenes.mutacion)} con mutación
+        {origenes.elite ? ` y ${fmtEntero(origenes.elite)} élite, copiada de la generación anterior` : ''}). Esta
+        población es la base de la siguiente generación.
       </p>
       <dl className={s.estadisticas}>
         <div>
@@ -621,6 +652,11 @@ function EvaluacionGen({ actual, resumen, resumenPrevio, info, color, cerrada })
       <div className={s.destacado}>
         <p className={s.destacadoTitulo}>Mejor ruta de la generación, #{mejor.posicion}</p>
         <TiraRuta perm={mejor.permutacion} info={info} color={color} cerrada={cerrada} />
+        {mejor.origen === 'elite' && (
+          <p className={s.notaPequena}>
+            Es la élite: ningún hijo nuevo superó a la mejor ruta de la generación anterior, así que se conserva.
+          </p>
+        )}
       </div>
       <BarrasAptitud individuos={actual.individuos} color={color} />
     </>

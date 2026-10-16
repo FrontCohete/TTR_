@@ -2,6 +2,11 @@
 // Registra cada operación (selección, torneo, cruce, mutación) con la misma forma que
 // devolverá GET /api/generaciones/{id}/individuos, para que la vista Rutas pueda reproducirla.
 // El backend real (genetico.py) debe producir datos con esta misma estructura.
+//
+// Elitismo (16 oct 2026): las últimas `n_elite` posiciones de cada generación nueva son copias
+// intactas de las mejores rutas de la generación anterior (origen "elite", padre_1 = su posición
+// anterior, padre_2 = null). No tienen torneos, cruce ni mutación, así que en `operaciones` hay
+// 2·(P − n_elite) torneos y (P − n_elite) cruces; el campo `hijo` indica a qué posición pertenecen.
 
 /** Generador pseudoaleatorio reproducible (mulberry32) */
 export function crearAzar(semilla = 42) {
@@ -95,9 +100,11 @@ export function ejecutarAG({ nodos, distancia, parametros }) {
     op_mutacion = 'swap',
     semilla = 42,
     ruta_cerrada = true,
+    n_elite = 1,
   } = parametros
   const azar = crearAzar(semilla)
   const n = nodos.length
+  const E = Math.max(0, Math.min(n_elite, P - 1)) // al menos un hijo se forma por torneo y cruce
 
   const aptitud = (perm) => {
     let d = 0
@@ -153,7 +160,7 @@ export function ejecutarAG({ nodos, distancia, parametros }) {
     const cruces = []
     const mutaciones = []
     const nueva = []
-    for (let i = 0; i < P; i++) {
+    for (let i = 0; i < P - E; i++) {
       // Selección al azar + torneo (dos veces: un torneo por padre)
       const t1 = torneo(i)
       const t2 = torneo(i)
@@ -199,6 +206,21 @@ export function ejecutarAG({ nodos, distancia, parametros }) {
         padre_2: t2.ganador,
       })
     }
+    // Élite: las E mejores de la generación anterior pasan intactas a las últimas posiciones
+    const mejores = poblacion
+      .map((ind, pos) => ({ ind, pos }))
+      .sort((x, y) => x.ind.distancia - y.ind.distancia || x.pos - y.pos)
+      .slice(0, E)
+    mejores.forEach(({ ind, pos }, k) => {
+      nueva.push({
+        posicion: P - E + k,
+        permutacion: ind.permutacion.slice(),
+        distancia: ind.distancia,
+        origen: 'elite',
+        padre_1: pos,
+        padre_2: null,
+      })
+    })
     poblacion = nueva
     generaciones.push(resumir(g, nueva, { seleccion_azar, torneos, cruces, mutaciones }))
   }

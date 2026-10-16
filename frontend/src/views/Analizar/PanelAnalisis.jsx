@@ -10,6 +10,10 @@ import { SENAL, colorGravedad, nombreGravedad, textoSobre } from '../../lib/colo
 import { fmtDelta, fmtEntero, fmtFechaHora, fmtPct, fmt2, plural } from '../../lib/formato.js'
 import s from './Analizar.module.css'
 
+/** Límite de almacenamiento: población × generaciones (DECISIONES_ETAPA5_GENETICO §1). El backend también lo valida */
+export const LIMITE_POBLACION_X_GENERACIONES = 100000
+const excedeLimite = (p) => Number(p.tam_poblacion) * Number(p.n_generaciones) > LIMITE_POBLACION_X_GENERACIONES
+
 export default function PanelAnalisis({
   analisis: a,
   hotspots,
@@ -22,7 +26,8 @@ export default function PanelAnalisis({
   repartir,
   generar,
 }) {
-  const { nGrafos, ponerNGrafos } = useSesion()
+  const { nGrafos, ponerNGrafos, parametros } = useSesion()
+  const excede = excedeLimite(parametros)
   const diferencia = a && a.n_hotspots_previo != null ? a.n_hotspots - a.n_hotspots_previo : null
   const textoGenerar = nGrafos === 1 ? 'Generar agente' : `Generar ${nGrafos} agentes`
 
@@ -66,7 +71,8 @@ export default function PanelAnalisis({
         icono={Waypoints}
         className={s.botonGenerar}
         cargando={generar.isPending}
-        disabled={!a || !hotspots}
+        disabled={!a || !hotspots || excede}
+        title={excede ? 'Baja la población o las generaciones (máximo 100,000 en total)' : undefined}
         onClick={() => generar.mutate()}
       >
         {generar.isPending ? 'Generando…' : textoGenerar}
@@ -354,6 +360,14 @@ function ParametrosAG() {
           alCambiar={(v) => ponerParametros({ prob_mutacion: v })}
         />
       </div>
+      {excedeLimite(p) && (
+        <p className={s.notaCambio} role="alert">
+          Población × generaciones = {fmtEntero(Number(p.tam_poblacion) * Number(p.n_generaciones))}. El máximo es{' '}
+          {fmtEntero(LIMITE_POBLACION_X_GENERACIONES)} (por ejemplo, 100 × 1,000): cada ruta de cada generación se guarda
+          para reproducirla en Rutas.
+        </p>
+      )}
+      <p className={s.pistaCampo}>Élite: la mejor ruta de cada generación pasa intacta a la siguiente (fija en 1).</p>
       <div className={s.campo}>
         <span className={s.etiquetaCampo}>Cruce por permutación</span>
         <Segmentado

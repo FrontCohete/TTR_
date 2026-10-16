@@ -43,15 +43,19 @@ const almacenSeguro = (() => {
   }
 })()
 
-/** Parámetros por defecto del algoritmo genético (POST /api/agentes) */
+/**
+ * Parámetros por defecto del algoritmo genético (POST /api/agentes).
+ * Acordados el 16 oct 2026 a partir de PruebasGen (DECISIONES_ETAPA5_GENETICO §1).
+ * La élite (1) es fija: no es un parámetro de la interfaz.
+ */
 export const PARAMETROS_AG = {
-  tam_poblacion: 50,
-  n_generaciones: 200,
-  tam_torneo: 3,
+  tam_poblacion: 100,
+  n_generaciones: 1000,
+  tam_torneo: 5,
   prob_cruce: 0.9,
-  prob_mutacion: 0.1,
+  prob_mutacion: 0.5,
   op_cruce: 'OX',
-  op_mutacion: 'swap',
+  op_mutacion: 'inversion',
   semilla: 42,
   ruta_cerrada: true,
 }
@@ -89,7 +93,10 @@ export const useSesion = create(
     }),
     {
       name: 'ttr-sesion',
-      version: 1,
+      // Versión 2: nuevos valores por defecto del genético. Una sesión guardada con la versión 1
+      // recibe los parámetros nuevos sin tener que pulsar «Restablecer valores».
+      version: 2,
+      migrate: (estado, version) => (version < 2 ? { ...estado, parametros: PARAMETROS_AG } : estado),
       storage: createJSONStorage(() => almacenSeguro),
     },
   ),

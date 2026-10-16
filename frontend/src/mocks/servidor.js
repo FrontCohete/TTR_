@@ -465,6 +465,10 @@ async function resultado(ej) {
 }
 
 const DEMORA_AG = (indice) => 1400 + indice * 650
+/** Límite de almacenamiento (DECISIONES_ETAPA5_GENETICO §1): población × generaciones */
+export const LIMITE_POBLACION_X_GENERACIONES = 100000
+/** Élite fija: la mejor ruta de cada generación pasa intacta a la siguiente */
+export const N_ELITE = 1
 
 export async function crearAgentes(idParticion, parametros) {
   await esperar(400, 700)
@@ -473,6 +477,10 @@ export async function crearAgentes(idParticion, parametros) {
   const reglas = [
     [parametros.tam_poblacion >= 2, 'La población debe tener al menos 2 individuos.'],
     [parametros.n_generaciones >= 1, 'Debe haber al menos 1 generación.'],
+    [
+      parametros.tam_poblacion * parametros.n_generaciones <= LIMITE_POBLACION_X_GENERACIONES,
+      `La población por el número de generaciones no puede pasar de ${LIMITE_POBLACION_X_GENERACIONES.toLocaleString('es-MX')} (por ejemplo, 100 × 1,000).`,
+    ],
     [
       parametros.tam_torneo >= 2 && parametros.tam_torneo <= parametros.tam_poblacion,
       'El torneo debe tener entre 2 participantes y el tamaño de la población.',
@@ -493,7 +501,7 @@ export async function crearAgentes(idParticion, parametros) {
       numero: g.numero,
       color: g.color,
       hotspots: g.hotspots,
-      parametros: { ...parametros },
+      parametros: { ...parametros, n_elite: N_ELITE },
       inicio: Date.now(),
       demora: DEMORA_AG(i),
     }

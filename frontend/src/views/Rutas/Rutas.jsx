@@ -126,13 +126,15 @@ function VistaRutas({ ejecuciones }) {
     const P = parametros?.tam_poblacion
     const ops = actual.data?.numero === gen ? actual.data.operaciones : null
     const n = ej.n_nodos ?? ej.hotspots?.length
+    // Con élite, los hijos que pasan por torneo y cruce son P − n_elite
+    const H = ops ? ops.cruces.length : P ? P - Math.min(parametros.n_elite ?? 0, P - 1) : 0
     return [
       P ? `${fmtEntero(P)} rutas de ${n} hotspots` : null,
       inicial ? `Mejor inicial: ${fmtDistancia(inicial.mejor_fitness)}` : null,
-      P ? `${fmtEntero(P * 2)} grupos de ${parametros.tam_torneo}` : null,
-      P ? `${fmtEntero(P * 2)} ganadores, ${fmtEntero(P)} parejas` : null,
+      P ? `${fmtEntero(H * 2)} grupos de ${parametros.tam_torneo}` : null,
+      P ? `${fmtEntero(H * 2)} ganadores, ${fmtEntero(H)} parejas` : null,
       ops
-        ? `${fmtEntero(ops.cruces.filter((c) => c.puntos_corte).length)} de ${fmtEntero(P)} con ${parametros.op_cruce}`
+        ? `${fmtEntero(ops.cruces.filter((c) => c.puntos_corte).length)} de ${fmtEntero(H)} con ${parametros.op_cruce}`
         : parametros
           ? `Operador ${parametros.op_cruce}`
           : null,
