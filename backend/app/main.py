@@ -14,8 +14,11 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.basedatos import engine
 from app.errores import registrar_manejadores
 
-from app.rutas import cargas, mapa, analisis, particiones
+from app.rutas import cargas, mapa, analisis, particiones, agentes
 from app.servicios import procesamiento
+
+from app.servicios import agentes as servicio_agentes
+
 from fastapi.middleware.gzip import GZipMiddleware
 
 log = logging.getLogger("uvicorn.error")
@@ -25,9 +28,11 @@ log = logging.getLogger("uvicorn.error")
 async def ciclo_de_vida(app: FastAPI):
     """Lo de antes del yield corre al encender la API; lo de después, al apagarla."""
     try:
+        
         interrumpidas = procesamiento.recuperar_interrumpidas()
         if interrumpidas:
-            log.warning("%s carga(s) quedaron a medias y se marcaron como error.", interrumpidas)
+            log.warning("%s carga(s) quedaron a medias y se marcaron como error.", interrumpidas)    
+            servicio_agentes.recuperar_interrumpidos()
     except SQLAlchemyError:
         log.warning("No se pudo revisar las cargas interrumpidas: ¿está encendida la base?")
     yield
@@ -53,6 +58,7 @@ app.include_router(mapa.router)
 app.include_router(cargas.router)
 app.include_router(analisis.router)
 app.include_router(particiones.router)
+app.include_router(agentes.router)
 
 
 @app.get("/", include_in_schema=False)

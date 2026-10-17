@@ -85,6 +85,34 @@ def test_fusion_junta_la_mas_chica_con_la_mas_cercana():
     assert sorted(map(sorted, resultado)) == [[1, 2, 5], [3, 4]]
 
 
+def ciudad_aleatoria(semilla, n=40):
+    """Zonas al azar de tamaños distintos y algunos hotspots sueltos (para la regla del mínimo)."""
+    rng = np.random.default_rng(semilla)
+    centros = [(19.45 + rng.random() * .12, -99.17 + rng.random() * .12) for _ in range(rng.integers(3, 7))]
+    filas = []
+    for e in range(n):
+        lat, lon = centros[rng.integers(len(centros))] if rng.random() < .85 else (19.45 + rng.random() * .12, -99.17 + rng.random() * .12)
+        filas.append({"id_hotspot": 1000 + e, "etiqueta": e + 1, "lat": lat + rng.normal(0, .006), "lon": lon + rng.normal(0, .006)})
+    return pd.DataFrame(filas)
+
+
+def test_prefiere_grafos_de_al_menos_5_hotspots():
+    # con esta ciudad, la primera resolución que da 4 grafos deja uno de 2 hotspots; una posterior da 5, 9, 13 y 13
+    r = P.particionar(ciudad_aleatoria(14), 4)
+    assert r.minimo_cumplido and not r.fusion
+    assert min(len(g["hotspots"]) for g in r.grafos) >= P.MIN_NODOS
+
+
+def test_si_ningun_reparto_cumple_el_minimo_se_usa_el_primero():
+    h = ciudad(por_zona=(12, 12, 12, 0, 0))
+    rng = np.random.default_rng(3)
+    chica = pd.DataFrame([{"id_hotspot": 2000 + i, "etiqueta": 100 + i, "zona": 9,
+                           "lat": 19.47 + rng.normal(0, .002), "lon": -99.04 + rng.normal(0, .002)} for i in range(3)])
+    r = P.particionar(pd.concat([h, chica], ignore_index=True), 4)
+    assert not r.minimo_cumplido
+    assert sorted(len(g["hotspots"]) for g in r.grafos) == [3, 12, 12, 12]
+
+
 def test_mas_grafos_que_hotspots():
     with pytest.raises(P.HotspotsInsuficientes):
         P.particionar(ciudad(por_zona=(1, 1, 1, 0, 0)), 5)
@@ -122,6 +150,13 @@ def test_mismo_n_reutiliza_y_otro_n_cambia_la_vigente(con, vigente):
         SELECT id_particion FROM particion_louvain WHERE id_analisis = :a AND vigente
     """), {"a": vigente}).scalars().all()
     assert vigentes == [otra]
+
+
+def test_grafos_json_anota_el_minimo(con, vigente):
+    con.execute(text("DELETE FROM particion_louvain WHERE id_analisis = :a"), {"a": vigente})   # se deshace al final
+    p = P.nueva_particion(con, 3)["id_particion"]
+    j = con.execute(text("SELECT grafos_json FROM particion_louvain WHERE id_particion = :p"), {"p": p}).scalar()
+    assert j["minimo_nodos"] == 5 and isinstance(j["minimo_cumplido"], bool)
 
 
 # ------------------------------------------------------------------ API

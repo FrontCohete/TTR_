@@ -224,6 +224,13 @@ def ejecutar_ag(ids: list[int], D: np.ndarray, parametros: Parametros | None = N
         part = rng.integers(P, size=(2 * H, K)).astype(np.int32)
         gan = part[np.arange(2 * H), np.argmin(dist[part], axis=1)]
         sorteo = rng.random((H, 2))                       # [cruce?, mutación?]
+        # cortes y posiciones de mutación sorteados de una vez (sacarlos uno por uno es lo lento)
+        cortes_azar = _cortes_de_la_generacion(n, H, rng) if n > 2 else None
+        if n > 1:
+            mx = rng.integers(n, size=H)
+            my = rng.integers(n - 1, size=H)
+            my = my + (my >= mx)                          # dos posiciones distintas, uniformes
+            mut_a, mut_b = np.minimum(mx, my).tolist(), np.maximum(mx, my).tolist()
         cortes = np.full((H, 2), -1, np.int32)
         nueva = np.empty((P, n), np.int32)
         origen = np.empty(P, np.int8)
@@ -233,14 +240,14 @@ def ejecutar_ag(ids: list[int], D: np.ndarray, parametros: Parametros | None = N
         for h in range(H):
             a, b = filas[gan[2 * h]], filas[gan[2 * h + 1]]
             if n > 2 and sorteo[h, 0] < p.prob_cruce:
-                c1, c2 = _puntos_de_corte(n, rng)
+                c1, c2 = cortes_azar[h]
                 hijo = cruzar(a, b, c1, c2)
                 cortes[h] = (c1, c2)
             else:
                 hijo = list(a)
             origen[h] = CRUCE
             if n > 1 and sorteo[h, 1] < p.prob_mutacion:
-                x, y = sorted(rng.choice(n, size=2, replace=False).tolist())
+                x, y = mut_a[h], mut_b[h]
                 hijo = mutar(hijo, x, y)
                 mutaciones.append((h, x, y))
                 origen[h] = MUTACION
@@ -283,6 +290,18 @@ def _puntos_de_corte(n: int, rng) -> tuple[int, int]:
         if c1 == 0 and c2 == n:
             continue
         return c1, c2
+
+
+def _cortes_de_la_generacion(n: int, H: int, rng) -> list[tuple[int, int]]:
+    """H pares de cortes válidos a la vez: se vuelven a sortear solo los que no sirven."""
+    c = rng.integers(n + 1, size=(H, 2))
+    while True:
+        malos = (c[:, 0] == c[:, 1]) | ((np.minimum(c[:, 0], c[:, 1]) == 0) & (np.maximum(c[:, 0], c[:, 1]) == n))
+        if not malos.any():
+            break
+        c[malos] = rng.integers(n + 1, size=(int(malos.sum()), 2))
+    c.sort(axis=1)
+    return [tuple(x) for x in c.tolist()]
 
 
 def _resumen(g: Generacion) -> dict:

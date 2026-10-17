@@ -3,8 +3,10 @@
 Decisiones (ver claude/DECISIONES_BACKEND.md, etapa 4):
   * distancias haversine entre medoides (radio 6,371,008.8 m), igual que la vista Rutas;
   * grafo para Louvain: cada hotspot se une con sus 4 vecinos más cercanos, peso 1000 / distancia;
-  * se busca una «resolución» que dé exactamente N comunidades (semilla fija 42); si ninguna
-    lo logra, se fusiona la comunidad más chica con la más cercana hasta llegar a N;
+  * se busca una «resolución» que dé exactamente N comunidades (semilla fija 42) y, de preferencia,
+    todas con al menos MIN_NODOS = 5 hotspots (etapa 5: un agente con 2 o 3 hotspots no tiene ruta
+    que buscar); si ninguna resolución cumple el mínimo, se usa la primera que da N; si ninguna da N,
+    se fusiona la comunidad más chica con la más cercana hasta llegar a N;
   * los grafos se numeran de norte a sur y llevan los colores fijos del frontend;
   * se guardan TODAS las parejas de hotspots dentro de cada grafo (las necesita el genético);
   * mismo análisis + mismo N → se reutiliza la partición que ya existe.
@@ -22,6 +24,7 @@ from sqlalchemy import text
 RADIO_TIERRA_M = 6_371_008.8
 VECINOS = 4
 SEMILLA = 42
+MIN_NODOS = 5                                   # preferencia de tamaño mínimo por grafo (etapa 5)
 COLORES = ["#1F5FD0", "#B87A00", "#13907A", "#8E3B9E", "#4E6B1F"]      # grafo 1…5
 RESOLUCIONES = np.geomspace(0.002, 20, 500)    # de menos a más comunidades
 
@@ -76,21 +79,35 @@ def fusionar(comunidades: list[set], posicion: dict, n: int) -> list[set]:
     return comunidades
 
 
-def louvain_n(G: nx.Graph, n: int, posicion: dict, semilla: int = SEMILLA):
-    """Exactamente n comunidades. Devuelve (comunidades, resolución, se_fusionó)."""
+def louvain_n(G: nx.Graph, n: int, posicion: dict, semilla: int = SEMILLA, minimo: int = MIN_NODOS):
+    """Exactamente n comunidades, de preferencia todas con ≥ `minimo` nodos.
+
+    Devuelve (comunidades, resolución, se_fusionó, mínimo_cumplido).
+      1. la primera resolución que da n comunidades y todas cumplen el mínimo;
+      2. si ninguna cumple, la primera que da n (lo que se elegía antes de la etapa 5);
+      3. si ninguna da n, la fusión de respaldo.
+    """
+    cumple = lambda cs: min(len(c) for c in cs) >= minimo       # noqa: E731
     if n == 1:
-        return [set(G.nodes)], None, False
+        return [set(G.nodes)], None, False, G.number_of_nodes() >= minimo
+    respaldo = None                             # la primera que da n aunque no cumpla el mínimo
     mas_cercana = None                          # la primera resolución que dé MÁS de n
     for r in RESOLUCIONES:
         comunidades = nx.community.louvain_communities(G, weight="weight", resolution=float(r), seed=semilla)
         if len(comunidades) == n:
-            return comunidades, float(r), False
+            if cumple(comunidades):
+                return comunidades, float(r), False, True
+            if respaldo is None:
+                respaldo = (comunidades, float(r))
         if len(comunidades) > n and mas_cercana is None:
             mas_cercana = (comunidades, float(r))
+    if respaldo is not None:
+        return respaldo[0], respaldo[1], False, False
     if mas_cercana is None:                     # ni con resolución 20 hubo suficientes
         mas_cercana = ([{v} for v in G.nodes], None)
     comunidades, r = mas_cercana
-    return fusionar(comunidades, posicion, n), r, True
+    comunidades = fusionar(comunidades, posicion, n)
+    return comunidades, r, True, cumple(comunidades)
 
 
 # ------------------------------------------------------------------ cálculo completo
@@ -101,6 +118,7 @@ class Resultado:
     modularidad: float
     fusion: bool
     grafos: list[dict] = field(repr=False)      # numero, color, hotspots, aristas
+    minimo_cumplido: bool = True                # todos los grafos tienen ≥ MIN_NODOS hotspots
 
 
 def particionar(hotspots: pd.DataFrame, n: int, semilla: int = SEMILLA) -> Resultado:
@@ -116,7 +134,7 @@ def particionar(hotspots: pd.DataFrame, n: int, semilla: int = SEMILLA) -> Resul
     indice = {ids[i]: i for i in range(len(ids))}
 
     G = grafo_vecinos(ids, D)
-    comunidades, resolucion, fusion = louvain_n(G, n, posicion, semilla)
+    comunidades, resolucion, fusion, minimo_cumplido = louvain_n(G, n, posicion, semilla)
     modularidad = float(nx.community.modularity(G, comunidades, weight="weight")) if n > 1 else 0.0
 
     # de norte a sur: la latitud promedio más alta es el grafo 1
@@ -129,7 +147,7 @@ def particionar(hotspots: pd.DataFrame, n: int, semilla: int = SEMILLA) -> Resul
         aristas = [(min(a, b), max(a, b), d) for a, b, d in aristas]       # id_origen < id_destino
         grafos.append({"numero": numero, "color": COLORES[numero - 1],
                        "hotspots": miembros, "aristas": aristas})
-    return Resultado(n, resolucion, round(modularidad, 4), fusion, grafos)
+    return Resultado(n, resolucion, round(modularidad, 4), fusion, grafos, minimo_cumplido)
 
 
 # ------------------------------------------------------------------ base de datos
@@ -223,6 +241,8 @@ def nueva_particion(con, n: int, semilla: int = SEMILLA) -> dict:
         id_particion = guardar(con, id_analisis, r, semilla)
         datos = respuesta(con, id_particion)
         datos["fusion"] = r.fusion
+        datos["minimo_nodos"] = MIN_NODOS
+        datos["minimo_cumplido"] = r.minimo_cumplido
         con.execute(text("UPDATE particion_louvain SET grafos_json = CAST(:j AS jsonb) WHERE id_particion = :p"),
                     {"j": json.dumps(datos), "p": id_particion})
     marcar_vigente(con, id_analisis, id_particion)
