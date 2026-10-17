@@ -4,7 +4,7 @@ import { useColonias } from '../../api/consultas.js'
 import { ENCUADRE_GAM, limitesLeaflet } from '../../lib/geo.js'
 import { NOCHE } from '../../lib/colores.js'
 
-const TESELAS = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+const TESELAS = 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=cb1_4n0b_1_decbdf546aece82d4475229a'
 const ATRIBUCION =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
 

@@ -7,5 +7,5 @@
 // También se puede definir con la variable VITE_USE_MOCKS en un archivo .env (ver .env.example);
 // si existe, tiene prioridad sobre este valor.
 export const CONFIG = {
-  usarDatosSimulados: true,
+  usarDatosSimulados: false,
 }
