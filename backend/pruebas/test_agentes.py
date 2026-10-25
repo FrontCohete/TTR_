@@ -36,6 +36,9 @@ def particion(con):
     if con.execute(text("SELECT count(*) FROM analisis_hdbscan WHERE vigente")).scalar() == 0:
         pytest.skip("no hay análisis vigente: corre primero python crear_analisis.py")
     con.execute(text("UPDATE ejecucion_ag SET estado = 'error' WHERE estado IN ('pendiente', 'ejecutando')"))
+    # los agentes reales se dan por liberados (solo en esta transacción): así las pruebas no
+    # borran cientos de miles de rutas cada vez y siguen siendo rápidas
+    con.execute(text("UPDATE ejecucion_ag SET rutas_borradas = true WHERE NOT rutas_borradas"))
     return P.nueva_particion(con, 2)
 
 
@@ -115,17 +118,38 @@ def test_ruta_cerrada_empieza_en_la_mayor_carga_y_mide_lo_reportado(con, corrido
         assert r["properties"]["orden"][0].startswith("H-")
 
 
-def test_nueva_corrida_borra_las_rutas_de_la_anterior(con, particion, corridos):
+def operaciones_guardadas(con, id_ejecucion):
+    return con.execute(text(
+        "SELECT count(*) FROM generacion WHERE id_ejecucion = :e AND operaciones IS NOT NULL"
+    ), {"e": id_ejecucion}).scalar()
+
+
+def test_una_tanda_nueva_libera_el_detalle_de_todas_las_anteriores(con, particion, corridos):
     con.execute(text("UPDATE ejecucion_ag SET estado = 'terminado' WHERE estado IN ('pendiente', 'ejecutando')"))
     nuevas = S.crear_ejecuciones(con, particion["id_particion"], CHICO)
     S.ejecutar_agentes([nuevas[0]["id_ejecucion"]], motor=MotorDePrueba(con))
-    vieja = corridos[0]["id_ejecucion"]
-    assert S.agente(con, vieja)["estado"] == "terminado"                  # el resumen se conserva
-    assert len(S.generaciones(con, vieja)) == 16
-    with pytest.raises(S.NoEncontrado, match="más nueva"):
-        S.individuos(con, S.generaciones(con, vieja)[3]["id_generacion"])
-    otra = corridos[1]["id_ejecucion"]                                     # otro grafo: intacto
-    assert S.individuos(con, S.generaciones(con, otra)[3]["id_generacion"])["numero"] == 3
+    for vieja in (c["id_ejecucion"] for c in corridos):                 # mismo grafo y el otro grafo
+        a = S.agente(con, vieja)
+        assert a["estado"] == "terminado" and a["mejor_distancia"] > 0 and a["ruta_optima"]   # el resumen se conserva
+        assert len(S.generaciones(con, vieja)) == 16                    # la curva de aptitud también
+        assert operaciones_guardadas(con, vieja) == 0
+        with pytest.raises(S.NoEncontrado, match="más nueva"):
+            S.individuos(con, S.generaciones(con, vieja)[3]["id_generacion"])
+        assert S.ruta(con, vieja)["geometry"]["type"] == "LineString"   # Simular sigue funcionando
+    nueva = nuevas[0]["id_ejecucion"]                                   # la tanda actual: completa
+    assert S.individuos(con, S.generaciones(con, nueva)[3]["id_generacion"])["numero"] == 3
+    assert operaciones_guardadas(con, nueva) == 15
+
+
+def test_liberar_no_toca_la_tanda_actual_y_limpia_operaciones_sueltas(con, corridos):
+    uno, dos = (c["id_ejecucion"] for c in corridos)
+    # una corrida limpiada con la regla anterior: sin rutas pero con operaciones
+    con.execute(text("UPDATE ejecucion_ag SET rutas_borradas = true WHERE id_ejecucion = :e"), {"e": uno})
+    r = S.liberar_tandas_anteriores(con, [dos])
+    assert r["individuos"] == 0                                          # «uno» ya estaba marcado: no se repite
+    assert operaciones_guardadas(con, uno) == 0 and operaciones_guardadas(con, dos) == 15
+    assert S.individuos(con, S.generaciones(con, dos)[1]["id_generacion"])["numero"] == 1
+    assert S.liberar_tandas_anteriores(con, [dos])["generaciones"] == 0   # una segunda vez no hace nada
 
 
 def test_un_agente_con_error_no_detiene_a_los_demas(con, particion, monkeypatch):

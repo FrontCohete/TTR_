@@ -2,11 +2,15 @@
 
 Flujo de POST /api/agentes:
   1. crear_ejecuciones(): una fila de ejecucion_ag por grafo de la partición, en estado «pendiente».
-  2. ejecutar_agentes() en segundo plano, un agente tras otro:
-       «ejecutando» → genético (avance 0–85 %) → guardar() en UNA transacción (85–100 %) → «terminado».
-     Si algo falla, ese agente queda en «error» con su mensaje y se sigue con el siguiente.
-  3. guardar(): borra las rutas (tabla individuo) de las corridas anteriores del mismo grafo,
-     escribe generacion e individuo con COPY y deja la ejecución terminada.
+  2. ejecutar_agentes() en segundo plano:
+       a. liberar_tandas_anteriores(): «solo la última tanda conserva el detalle» (etapa 5.6). A TODOS
+          los agentes anteriores se les borran las rutas (individuo) y las operaciones de cada
+          generación; se conservan ejecucion_ag (distancia, ruta óptima) y el resumen por generación
+          (la curva de aptitud). El detalle se puede regenerar idéntico con la misma semilla.
+       b. un agente tras otro: «ejecutando» → genético (avance 0–85 %) → guardar() en UNA
+          transacción (85–100 %) → «terminado». Si algo falla, ese agente queda en «error» con su
+          mensaje y se sigue con el siguiente.
+  3. guardar(): escribe generacion e individuo con COPY y deja la ejecución terminada.
 
 Las funciones de consulta (agente, generaciones, individuos, ruta) arman las respuestas de
 README_INTEGRACION §4.13–4.16, con la élite de DECISIONES_ETAPA5_GENETICO.md.
@@ -69,6 +73,15 @@ def ejecutar_agentes(ids_ejecucion: list[int], motor=None) -> None:
     """Corre los agentes uno tras otro. `motor` es el engine (las pruebas pasan uno propio)."""
     if motor is None:
         from app.basedatos import engine as motor
+    try:                                               # si la limpieza falla, los agentes corren igual
+        with motor.begin() as con:
+            liberado = liberar_tandas_anteriores(con, ids_ejecucion)
+        if liberado["agentes"]:
+            log.info("Tandas anteriores: se liberó el detalle de %(agentes)d agente(s) "
+                     "(%(individuos)d rutas, %(generaciones)d generaciones con operaciones)", liberado)
+            _vacuum(motor)
+    except Exception:
+        log.exception("No se pudo liberar el detalle de las tandas anteriores")
     for id_ejecucion in ids_ejecucion:
         try:
             ejecutar_uno(id_ejecucion, motor)
@@ -121,8 +134,7 @@ def datos_grafo(con, id_grafo: int):
 
 # ------------------------------------------------------------------ guardar
 def guardar(con, id_ejecucion: int, id_grafo: int, r: AG.Resultado, hotspots: list[dict]) -> None:
-    """generacion + individuo con COPY, limpieza de corridas viejas y ejecución terminada. No hace commit."""
-    borrar_rutas_anteriores(con, id_grafo, id_ejecucion)
+    """generacion + individuo con COPY y ejecución terminada. No hace commit."""
     G = len(r.generaciones)
     ids_gen = _reservar(con, "generacion", "id_generacion", G)
     tamanos = [len(g.distancia) for g in r.generaciones]
@@ -158,25 +170,45 @@ def guardar(con, id_ejecucion: int, id_grafo: int, r: AG.Resultado, hotspots: li
     """), {"e": id_ejecucion, "d": r.mejor_distancia, "ruta": json.dumps(ruta), "gm": r.generacion_mejor, "t": r.duracion_s})
 
 
-def borrar_rutas_anteriores(con, id_grafo: int, id_ejecucion: int) -> int:
-    """Borra las filas de individuo de las corridas anteriores del grafo; conserva ejecucion_ag y generacion."""
+def liberar_tandas_anteriores(con, tanda: list[int]) -> dict:
+    """«Solo la última tanda conserva el detalle»: borra individuo y operaciones de los demás agentes.
+
+    `tanda`: los id_ejecucion que se van a calcular ahora (no se tocan). Solo se liberan agentes
+    terminados o con error (crear_ejecuciones ya impide que haya otros calculando). También vacía
+    operaciones que quedaron de corridas limpiadas con la regla anterior. No hace commit.
+    """
     viejas = con.execute(text("""
         SELECT id_ejecucion FROM ejecucion_ag
-        WHERE id_grafo = :g AND id_ejecucion <> :e AND NOT rutas_borradas AND estado IN ('terminado', 'error')
-    """), {"g": id_grafo, "e": id_ejecucion}).scalars().all()
-    if not viejas:
-        return 0
-    # primero se sueltan las referencias a padres (si no, cada fila borrada busca a sus hijos)
-    con.execute(text("""
-        UPDATE individuo SET id_padre_1 = NULL, id_padre_2 = NULL
-        WHERE id_generacion IN (SELECT id_generacion FROM generacion WHERE id_ejecucion = ANY(:v))
-          AND (id_padre_1 IS NOT NULL OR id_padre_2 IS NOT NULL)
-    """), {"v": viejas})
-    n = con.execute(text("""
-        DELETE FROM individuo WHERE id_generacion IN (SELECT id_generacion FROM generacion WHERE id_ejecucion = ANY(:v))
-    """), {"v": viejas}).rowcount
-    con.execute(text("UPDATE ejecucion_ag SET rutas_borradas = true WHERE id_ejecucion = ANY(:v)"), {"v": viejas})
-    return n
+        WHERE NOT (id_ejecucion = ANY(:t)) AND estado IN ('terminado', 'error') AND NOT rutas_borradas
+    """), {"t": list(tanda)}).scalars().all()
+    n = 0
+    if viejas:
+        # un solo DELETE con todas las generaciones: los hijos se borran en la misma sentencia, así que
+        # «ON DELETE SET NULL» no tiene nada que actualizar (soltar antes los padres era 2× más lento)
+        n = con.execute(text("""
+            DELETE FROM individuo
+            WHERE id_generacion IN (SELECT id_generacion FROM generacion WHERE id_ejecucion = ANY(:v))
+        """), {"v": viejas}).rowcount
+        con.execute(text("UPDATE ejecucion_ag SET rutas_borradas = true WHERE id_ejecucion = ANY(:v)"), {"v": viejas})
+    ops = con.execute(text("""
+        UPDATE generacion g SET operaciones = NULL
+        FROM ejecucion_ag e
+        WHERE g.id_ejecucion = e.id_ejecucion AND e.rutas_borradas AND g.operaciones IS NOT NULL
+          AND NOT (e.id_ejecucion = ANY(:t))
+    """), {"t": list(tanda)}).rowcount
+    return {"agentes": len(viejas), "individuos": n, "generaciones": ops}
+
+
+def _vacuum(motor) -> None:
+    """VACUUM (sin FULL, no bloquea lecturas): el espacio liberado se reutiliza en la tanda nueva
+    en lugar de crecer el archivo. Las pruebas usan un motor sin connect(): ahí no se hace."""
+    if not hasattr(motor, "connect"):
+        return
+    try:
+        with motor.connect().execution_options(isolation_level="AUTOCOMMIT") as c:
+            c.execute(text("VACUUM individuo, generacion"))
+    except Exception:
+        log.warning("No se pudo hacer VACUUM después de liberar las tandas anteriores", exc_info=True)
 
 
 def _reservar(con, tabla: str, columna: str, n: int) -> list[int]:
@@ -244,8 +276,9 @@ def individuos(con, id_generacion: int) -> dict:
     if g is None:
         raise NoEncontrado(f"No existe la generación {id_generacion}.")
     if g["rutas_borradas"]:
-        raise NoEncontrado("Las rutas de esta corrida se borraron porque hay una más nueva del mismo grafo. "
-                           "Vuelve a Analizar y genera los agentes de nuevo.")
+        raise NoEncontrado("El paso a paso de este agente se borró porque se generó una tanda de agentes más nueva "
+                           "(solo la última tanda conserva el detalle). Vuelve a Analizar y genera los agentes "
+                           "de nuevo: con la misma semilla el resultado es idéntico.")
     filas = con.execute(text("""
         SELECT i.posicion, i.permutacion, i.distancia, i.origen, p1.posicion AS padre_1, p2.posicion AS padre_2
         FROM individuo i

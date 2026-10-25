@@ -11,15 +11,12 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import RedirectResponse
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
+
 from app.basedatos import engine
 from app.errores import registrar_manejadores
-
-from app.rutas import cargas, mapa, analisis, particiones, agentes
+from app.rutas import cargas, mapa, analisis, particiones, agentes, mantenimiento   # ← 5.6
 from app.servicios import procesamiento
-
 from app.servicios import agentes as servicio_agentes
-
-from fastapi.middleware.gzip import GZipMiddleware
 
 log = logging.getLogger("uvicorn.error")
 
@@ -28,11 +25,12 @@ log = logging.getLogger("uvicorn.error")
 async def ciclo_de_vida(app: FastAPI):
     """Lo de antes del yield corre al encender la API; lo de después, al apagarla."""
     try:
-        
         interrumpidas = procesamiento.recuperar_interrumpidas()
         if interrumpidas:
-            log.warning("%s carga(s) quedaron a medias y se marcaron como error.", interrumpidas)    
-            servicio_agentes.recuperar_interrumpidos()
+            log.warning("%s carga(s) quedaron a medias y se marcaron como error.", interrumpidas)
+        agentes_interrumpidos = servicio_agentes.recuperar_interrumpidos()            # ← 5.6: siempre
+        if agentes_interrumpidos:
+            log.warning("%s agente(s) quedaron a medias y se marcaron como error.", agentes_interrumpidos)
     except SQLAlchemyError:
         log.warning("No se pudo revisar las cargas interrumpidas: ¿está encendida la base?")
     yield
@@ -44,7 +42,7 @@ app = FastAPI(
         "Backend de TTR_: ingesta de datos de la FGJ, HDBSCAN, Louvain y "
         "algoritmo genético sobre la alcaldía Gustavo A. Madero."
     ),
-    version="0.3.0",
+    version="0.4.0",                                                                  # ← 5.6
     lifespan=ciclo_de_vida,
 )
 # Comprime las respuestas de más de 1 KB (puntos, colonias, generaciones)
@@ -59,6 +57,7 @@ app.include_router(cargas.router)
 app.include_router(analisis.router)
 app.include_router(particiones.router)
 app.include_router(agentes.router)
+app.include_router(mantenimiento.router)                                              # ← 5.6
 
 
 @app.get("/", include_in_schema=False)
