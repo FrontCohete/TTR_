@@ -1,0 +1,163 @@
+/* Inicio › Mantenimiento («Empezar de cero») */
+.mant {
+  border: 1px solid var(--borde);
+  border-radius: var(--r-l);
+  background: var(--superficie);
+  overflow: hidden;
+}
+
+.cabeza {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cabeza:hover {
+  background: rgba(44, 46, 62, 0.04);
+}
+
+.cabeza:focus-visible {
+  outline: 2px solid var(--senal);
+  outline-offset: -2px;
+}
+
+.icono {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--cromo);
+  color: var(--texto-inv);
+}
+
+.textos {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.titulo {
+  font-weight: 700;
+}
+
+.sub {
+  font-size: var(--t-s);
+  color: var(--texto-3);
+}
+
+.flecha {
+  flex: none;
+  color: var(--texto-3);
+  transition: transform var(--d-2) var(--ease);
+}
+
+.flechaAbierta {
+  transform: rotate(180deg);
+}
+
+.cuerpo {
+  overflow: hidden;
+}
+
+.interior {
+  display: grid;
+  gap: 14px;
+  padding: 4px 16px 18px;
+}
+
+.explica {
+  font-size: var(--t-s);
+  color: var(--texto-2);
+  max-width: 70ch;
+}
+
+.cifras {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px 14px;
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: var(--r-m);
+  background: var(--superficie-2);
+  border: 1px solid var(--borde);
+}
+
+.cifras dt {
+  font-size: var(--t-xs);
+  color: var(--texto-3);
+}
+
+.cifras dd {
+  margin: 2px 0 0;
+  font-size: var(--t-l);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.formulario {
+  display: grid;
+  gap: 10px;
+}
+
+.nota {
+  font-size: var(--t-s);
+  color: var(--texto-3);
+}
+
+.codigo {
+  display: block;
+  padding: 8px 10px;
+  border-radius: var(--r-s);
+  background: var(--cromo);
+  color: var(--texto-inv);
+  font-size: var(--t-xs);
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.etiqueta {
+  font-size: var(--t-s);
+  font-weight: 600;
+}
+
+.fila {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.campo {
+  flex: 1;
+  min-width: 160px;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--borde-2);
+  border-radius: var(--r-m);
+  background: var(--superficie-2);
+  color: var(--texto);
+  font-family: var(--f-dato);
+  font-size: var(--t-m);
+  letter-spacing: 0.06em;
+}
+
+.campo:focus-visible {
+  outline: 2px solid var(--senal);
+  outline-offset: 1px;
+}
+
+@media (max-width: 767px) {
+  .fila > * {
+    flex: 1 1 100%;
+  }
+}

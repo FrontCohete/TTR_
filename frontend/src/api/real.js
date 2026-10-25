@@ -27,3 +27,15 @@ export const obtenerIndividuos = (idGeneracion) => solicitar(`/generaciones/${id
 // ---------- Vista Simular ----------
 export const obtenerRuta = (idEjecucion) => solicitar(`/agentes/${idEjecucion}/ruta`)
 export const registrarSimulacion = (cuerpo) => solicitar('/simulaciones', { metodo: 'POST', cuerpo })
+
+
+   // ---------- Etapa 6 (Simular) y mantenimiento (Inicio) ----------
+   /** GET /api/agentes/{id}/ruta-calles: la ruta óptima dibujada por calles (OSRM) */
+   export const obtenerRutaCalles = (idEjecucion) => solicitar(`/agentes/${idEjecucion}/ruta-calles`)
+
+   /** GET /api/mantenimiento: qué hay en la base y si se puede empezar de cero */
+   export const obtenerMantenimiento = () => solicitar('/mantenimiento')
+
+   /** POST /api/mantenimiento/reiniciar: borra los datos y conserva los catálogos */
+   export const reiniciarBase = (confirmacion) =>
+     solicitar('/mantenimiento/reiniciar', { metodo: 'POST', cuerpo: { confirmacion } })

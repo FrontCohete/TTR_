@@ -209,6 +209,48 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Línea recta (genético) frente a calles (OSRM) */
+.distancias {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 8px 12px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--r-m);
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+}
+
+.distancias dt {
+  font-size: var(--t-xs);
+  color: var(--texto-3);
+}
+
+.distancias dd {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 2px 0 0;
+  font-weight: 700;
+  font-size: var(--t-m);
+}
+
+.diferencia {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--senal-suave);
+  color: var(--senal-texto);
+  font-size: var(--t-xs);
+  font-weight: 700;
+}
+
+.noDisponible {
+  font-weight: 500;
+  font-size: var(--t-s);
+  color: var(--texto-3);
+}
+
 .agenteCargando {
   color: var(--texto-3);
   font-size: var(--t-s);

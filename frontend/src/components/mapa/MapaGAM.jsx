@@ -4,7 +4,12 @@ import { useColonias } from '../../api/consultas.js'
 import { ENCUADRE_GAM, limitesLeaflet } from '../../lib/geo.js'
 import { NOCHE } from '../../lib/colores.js'
 
-const TESELAS = 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=cb1_4n0b_1_decbdf546aece82d4475229a'
+// La clave de CARTO vive en frontend/.env (VITE_CARTO_KEY=...), que no se sube a Git.
+// Sin clave se usan las teselas estándar de OpenStreetMap, que no la piden.
+const CLAVE_CARTO = import.meta.env.VITE_CARTO_KEY
+const TESELAS = CLAVE_CARTO
+  ? `https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=${CLAVE_CARTO}`
+  : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
 const ATRIBUCION =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
 
@@ -18,7 +23,7 @@ const MUNDO = [
 
 /**
  * Mapa base de Gustavo A. Madero.
- * - Teselas de OpenStreetMap/CARTO (gratis, sin clave).
+ * - Teselas CARTO Voyager (con la clave de frontend/.env) u OpenStreetMap si no hay clave.
  * - Si no hay internet, dibuja las colonias como mapa base de respaldo.
  * - Oscurece el exterior de GAM y traza el contorno oficial.
  * Las capas de datos se pasan como hijos.

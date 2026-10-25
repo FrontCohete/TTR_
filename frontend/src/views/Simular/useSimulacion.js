@@ -6,28 +6,49 @@ export const DURACION_BASE_S = 24
 /** Velocidad supuesta del agente para el reloj simulado (km/h) */
 export const VELOCIDAD_KMH = 30
 
-/** Prepara una ruta GeoJSON: distancias acumuladas por vértice */
+/**
+ * Prepara una ruta GeoJSON: distancias acumuladas por vértice y a qué distancia está cada parada.
+ * - Línea recta (/ruta): cada vértice es una parada (un hotspot).
+ * - Por calles (/ruta-calles): hay cientos de vértices; `properties.indices_paradas` dice cuál
+ *   vértice corresponde a cada hotspot (incluido el regreso al inicio).
+ */
 function preparar(feature) {
   const coords = feature.geometry.coordinates
   const acumulada = [0]
   for (let i = 1; i < coords.length; i++) acumulada.push(acumulada[i - 1] + haversine(coords[i - 1], coords[i]))
-  return { coords, acumulada, largo: acumulada[acumulada.length - 1] }
+  const largo = acumulada[acumulada.length - 1]
+  const indices = feature.properties?.indices_paradas
+  const paradas = Array.isArray(indices)
+    ? indices.map((i) => acumulada[Math.min(Math.max(0, i), acumulada.length - 1)])
+    : acumulada.slice()
+  return { coords, acumulada, largo, paradas }
 }
 
-/** Posición [lat, lon] a d metros del inicio, y el índice del tramo */
+/** Cuántos valores de `lista` (ordenada) son ≤ d */
+function contarHasta(lista, d) {
+  let bajo = 0
+  let alto = lista.length
+  while (bajo < alto) {
+    const medio = (bajo + alto) >> 1
+    if (lista[medio] <= d + 1e-6) bajo = medio + 1
+    else alto = medio
+  }
+  return bajo
+}
+
+/** Posición [lat, lon] a d metros del inicio, el índice del tramo y cuántas paradas ya alcanzó */
 export function posicionEn(ruta, d) {
-  const { coords, acumulada, largo } = ruta
-  if (d <= 0) return { latlng: [coords[0][1], coords[0][0]], tramo: 0, visitados: 1 }
+  const { coords, acumulada, largo, paradas } = ruta
+  if (d <= 0) return { latlng: [coords[0][1], coords[0][0]], tramo: 0, visitados: Math.max(1, contarHasta(paradas, 0)) }
   if (d >= largo) {
     const u = coords[coords.length - 1]
-    return { latlng: [u[1], u[0]], tramo: coords.length - 2, visitados: coords.length, fin: true }
+    return { latlng: [u[1], u[0]], tramo: coords.length - 2, visitados: paradas.length, fin: true }
   }
-  let k = 0
-  while (k < acumulada.length - 2 && acumulada[k + 1] <= d) k++
+  const k = Math.min(acumulada.length - 2, Math.max(0, contarHasta(acumulada, d) - 1))
   const t = (d - acumulada[k]) / (acumulada[k + 1] - acumulada[k] || 1)
   const [x1, y1] = coords[k]
   const [x2, y2] = coords[k + 1]
-  return { latlng: [y1 + (y2 - y1) * t, x1 + (x2 - x1) * t], tramo: k, visitados: k + 1 }
+  return { latlng: [y1 + (y2 - y1) * t, x1 + (x2 - x1) * t], tramo: k, visitados: contarHasta(paradas, d) }
 }
 
 /**

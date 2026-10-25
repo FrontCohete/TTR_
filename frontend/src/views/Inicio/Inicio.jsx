@@ -14,6 +14,7 @@ import ZonaCarga from './ZonaCarga.jsx'
 import VistaPrevia from './VistaPrevia.jsx'
 import ProgresoProceso from './ProgresoProceso.jsx'
 import BaseAcumulada from './BaseAcumulada.jsx'
+import Mantenimiento from './Mantenimiento.jsx'
 import { COLUMNAS_OBLIGATORIAS } from './VistaPrevia.jsx'
 import s from './Inicio.module.css'
 
@@ -233,6 +234,8 @@ export default function Inicio() {
               {errorProceso}
             </Aviso>
           )}
+
+          {!cargaPrevia && !procesando && !completado && <Mantenimiento />}
         </div>
 
         <BaseAcumulada analisis={a} bloqueada={procesando} />

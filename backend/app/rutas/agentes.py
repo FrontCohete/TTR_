@@ -5,6 +5,7 @@
     GET  /api/agentes/{id}/generaciones        resumen de cada generación (vista Rutas)
     GET  /api/generaciones/{id}/individuos     las rutas y operaciones de una generación (vista Rutas)
     GET  /api/agentes/{id}/ruta                la mejor ruta como LineString (vista Simular)
+    GET  /api/agentes/{id}/ruta-calles         la misma ruta dibujada por calles (OSRM, se guarda; etapa 6)
     POST /api/simulaciones                     registra un recorrido simulado
 """
 from typing import Literal
@@ -15,6 +16,7 @@ from pydantic import BaseModel, Field
 from app.basedatos import engine
 from app.servicios import agentes as S
 from app.servicios import genetico as AG
+from app.servicios import ruteo
 
 router = APIRouter(prefix="/api", tags=["Rutas y Simular · Agentes"])
 
@@ -100,6 +102,20 @@ def individuos(id_generacion: int, con=Depends(conexion)):
 @router.get("/agentes/{id_ejecucion}/ruta", summary="La mejor ruta del agente (LineString)")
 def ruta(id_ejecucion: int, con=Depends(conexion)):
     return _responder(S.ruta, con, id_ejecucion)
+
+
+@router.get("/agentes/{id_ejecucion}/ruta-calles", summary="La mejor ruta del agente dibujada por calles (OSRM)")
+def ruta_calles(id_ejecucion: int, con=Depends(conexion)):
+    """La primera vez se la pide al servidor de ruteo (unos segundos) y la guarda; después sale de la base."""
+    try:
+        with transaccion(con):
+            return ruteo.ruta_calles(con, id_ejecucion)
+    except S.NoEncontrado as error:
+        raise HTTPException(status_code=404, detail=str(error))
+    except S.NoTerminado as error:
+        raise HTTPException(status_code=409, detail=str(error))
+    except ruteo.RuteoNoDisponible as error:
+        raise HTTPException(status_code=503, detail=f"{error} Se muestra la ruta en línea recta.")
 
 
 @router.post("/simulaciones", status_code=201, summary="Registrar un recorrido simulado")

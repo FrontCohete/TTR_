@@ -18,7 +18,8 @@
 
 .etiqueta {
   flex: none;
-  width: 34px;
+  min-width: 34px; /* crece con el texto («Después» ya no se corta) */
+  white-space: nowrap;
   font-family: var(--f-dato);
   font-size: var(--t-xs);
   color: var(--texto-3);

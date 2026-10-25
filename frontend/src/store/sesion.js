@@ -90,6 +90,9 @@ export const useSesion = create(
       ponerEjecuciones: (ejecuciones, idParticion) => set({ ejecuciones, idParticionAgentes: idParticion }),
       /** Un análisis nuevo invalida la partición y los agentes anteriores */
       olvidarResultados: () => set({ particion: null, ejecuciones: [], idParticionAgentes: null }),
+      /** «Empezar de cero» (Inicio › Mantenimiento): la base quedó vacía; se conservan N y los parámetros */
+      reiniciarTodo: () =>
+        set({ cargaPrevia: null, idCargaEnProceso: null, particion: null, ejecuciones: [], idParticionAgentes: null }),
     }),
     {
       name: 'ttr-sesion',

@@ -89,3 +89,23 @@ export const useRutas = (ids, habilitado = true) =>
       ...FIJO,
     })),
   })
+
+/**
+ * Ruta del agente dibujada por calles (OSRM, etapa 6). El backend la pide una vez y la guarda.
+ * Si el servidor de ruteo no responde (503) no se reintenta: Simular usa la línea recta.
+ */
+export const useRutasCalles = (ids, habilitado = true) =>
+  useQueries({
+    queries: ids.map((id) => ({
+      queryKey: ['agente', id, 'ruta-calles'],
+      queryFn: () => api.obtenerRutaCalles(id),
+      enabled: habilitado,
+      retry: (n, e) => ![404, 409, 503].includes(e?.estado) && n < 1,
+      ...FIJO,
+    })),
+  })
+
+// ---------- Mantenimiento (Inicio) ----------
+/** Qué hay en la base y si se puede «Empezar de cero». Solo se consulta con la sección abierta. */
+export const useMantenimiento = (habilitado = true) =>
+  useQuery({ queryKey: ['mantenimiento'], queryFn: api.obtenerMantenimiento, enabled: habilitado })

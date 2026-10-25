@@ -614,3 +614,62 @@ export async function registrarSimulacion({ id_ejecucion, distancia_total, durac
   guardar()
   return reg
 }
+// ================================================================== Etapa 6 y mantenimiento
+/** En modo simulado no hay servidor de ruteo: Simular usa la línea recta, igual que si OSRM fallara */
+export async function obtenerRutaCalles(idEjecucion) {
+  await esperar(200, 400)
+  buscarEjecucion(idEjecucion)
+  throw new ApiError(
+    503,
+    'El trazo por calles solo está disponible con el backend conectado. Se muestra la ruta en línea recta.',
+  )
+}
+
+const ESTADO_VACIO = () => ({
+  sec: { carga: 1, analisis: 1, particion: 1, grafo: 1, ejecucion: 1, simulacion: 1 },
+  cargas: [],
+  analisis: [],
+  procesos: {},
+  particiones: [],
+  ejecuciones: [],
+  simulaciones: [],
+})
+
+export async function obtenerMantenimiento() {
+  await esperar(120, 240)
+  const a = vigente()
+  const ocupado = estado.cargas.some((c) => c.estado === 'procesando')
+    ? 'Hay una carga procesándose. Espera a que termine y vuelve a intentarlo.'
+    : null
+  return {
+    permitido: true,
+    ocupado,
+    confirmacion: 'BORRAR',
+    datos: {
+      cargas: estado.cargas.filter((c) => c.estado !== 'recibido').length,
+      puntos: a?.n_puntos ?? 0,
+      analisis: estado.analisis.length,
+      hotspots: a?.n_hotspots ?? 0,
+      particiones: estado.particiones.length,
+      agentes: estado.ejecuciones.length,
+      simulaciones: estado.simulaciones.length,
+    },
+    espacio_bytes: 0,
+    espacio: 'datos simulados',
+    se_conservan: { colonias: 179, delitos: 299 },
+  }
+}
+
+export async function reiniciarBase(confirmacion) {
+  await esperar(500, 900)
+  if ((confirmacion ?? '').trim() !== 'BORRAR') throw new ApiError(422, 'Para confirmar escribe BORRAR en mayúsculas.')
+  const antes = (await obtenerMantenimiento()).datos
+  estado = ESTADO_VACIO()
+  resultadosAG.clear()
+  guardar()
+  return {
+    mensaje: 'Listo: la base quedó vacía. Ya puedes cargar tus datasets desde Inicio.',
+    borrado: { ...antes, espacio: 'datos simulados' },
+    archivos: { cargas_borradas: 0, resultados_archivados_en: null },
+  }
+}
