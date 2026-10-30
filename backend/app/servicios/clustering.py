@@ -64,7 +64,8 @@ CONSULTA_PUNTOS = text("""
            ST_Y(t.g)  AS y,
            d.peso_gravedad AS peso,
            d.nombre AS delito,
-           coalesce(c.nombre, p.colonia_texto, 'Sin colonia') AS colonia
+           coalesce(c.nombre, p.colonia_texto, 'Sin colonia') AS colonia,
+           p.hash_registro AS huella
     FROM punto_delictivo p
     JOIN cat_delito d USING (id_delito)
     LEFT JOIN colonia c USING (id_colonia)
@@ -74,7 +75,7 @@ CONSULTA_PUNTOS = text("""
     WHERE p.dentro_gam
       AND d.peso_gravedad >= :peso_minimo
       AND (CAST(:desde AS date) IS NULL OR p.fecha_hecho >= CAST(:desde AS date))
-    ORDER BY p.id_punto
+    ORDER BY p.hash_registro
 """)
 
 # Mismo filtro que CONSULTA_PUNTOS, pero solo cuenta (rápido): sirve para saber si
@@ -92,7 +93,8 @@ CONSULTA_CONTEO = text("""
 def leer_puntos(con, parametros: Parametros = PARAMETROS) -> pd.DataFrame:
     """Los puntos que entran al análisis, con coordenadas en grados (lat, lon) y en metros (x, y).
 
-    ORDER BY id_punto hace que el resultado sea siempre el mismo con los mismos datos.
+    Se ordenan por la huella de cada registro (hash_registro), que depende solo de su contenido:
+    el resultado es el mismo sin importar en qué orden se cargaron los datasets (etapa 6.5).
     """
     return pd.read_sql(CONSULTA_PUNTOS, con, params={
         "peso_minimo": max(parametros.peso_minimo, 1),     # el peso 0 nunca entra
@@ -208,9 +210,21 @@ def describir(puntos: pd.DataFrame, etiquetas: np.ndarray, prob: np.ndarray):
 
 
 # --------------------------------------------------------------- principal
+def orden_estable(puntos: pd.DataFrame) -> pd.DataFrame:
+    """Los mismos puntos siempre en el mismo orden, sin importar el orden de carga (etapa 6.5).
+
+    HDBSCAN puede dar resultados ligeramente distintos con los mismos puntos en otro orden cuando
+    hay coordenadas repetidas (muy común: varias víctimas en el mismo domicilio). Se ordena por
+    coordenadas en metros y, para desempatar, por la huella del registro (si viene en los datos).
+    """
+    claves = ["x", "y"] + (["huella"] if "huella" in puntos.columns else [])
+    return puntos.sort_values(claves, kind="mergesort").reset_index(drop=True)
+
+
 def ejecutar(puntos: pd.DataFrame, parametros: Parametros = PARAMETROS) -> Resultado:
     """Corre el análisis completo sobre los puntos ya leídos."""
     inicio = time.perf_counter()
+    puntos = orden_estable(puntos)
     xy = puntos[["x", "y"]].to_numpy()
     etiquetas, prob = agrupar(xy, parametros.min_cluster_size, parametros.min_samples)
     hotspots, nueva_etiqueta = describir(puntos, etiquetas, prob)

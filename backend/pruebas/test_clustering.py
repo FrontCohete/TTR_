@@ -100,7 +100,7 @@ def test_leer_puntos_solo_trae_gravedad_media_alta_critica(con):
     puntos = C.leer_puntos(con)
     assert len(puntos) > 0
     assert puntos.peso.min() >= 2
-    assert list(puntos.columns) == ["id_punto", "lat", "lon", "x", "y", "peso", "delito", "colonia"]
+    assert list(puntos.columns) == ["id_punto", "lat", "lon", "x", "y", "peso", "delito", "colonia", "huella"]
     # UTM 14N alrededor de GAM: x ≈ 480–500 km, y ≈ 2,150–2,170 km
     assert puntos.x.between(470_000, 510_000).all()
     assert puntos.y.between(2_140_000, 2_180_000).all()
