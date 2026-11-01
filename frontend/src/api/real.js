@@ -23,6 +23,8 @@ export const crearAgentes = (idParticion, parametros) =>
 export const obtenerAgente = (idEjecucion) => solicitar(`/agentes/${idEjecucion}`)
 export const obtenerGeneraciones = (idEjecucion) => solicitar(`/agentes/${idEjecucion}/generaciones`)
 export const obtenerIndividuos = (idGeneracion) => solicitar(`/generaciones/${idGeneracion}/individuos`)
+/** Etapa 7: la matriz con la que se optimizó la ruta ganadora (línea recta o por calles) */
+export const obtenerDistancias = (idEjecucion) => solicitar(`/agentes/${idEjecucion}/distancias`)
 
 // ---------- Vista Simular ----------
 export const obtenerRuta = (idEjecucion) => solicitar(`/agentes/${idEjecucion}/ruta`)

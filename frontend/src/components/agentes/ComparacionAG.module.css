@@ -1,0 +1,143 @@
+/* «La mejor de tres» (etapa 7): A · B · C medidas por calles */
+.caja {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: var(--r-l);
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+}
+
+.compacto {
+  padding: 10px 12px;
+  border-radius: var(--r-m);
+  gap: 6px;
+}
+
+.cabeza {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: var(--t-xs);
+  color: var(--texto-2);
+}
+
+.cabeza strong {
+  color: var(--texto);
+}
+
+.tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--t-s);
+}
+
+.tabla th,
+.tabla td {
+  padding: 4px 0;
+  text-align: left;
+  font-weight: 500;
+  border-bottom: 1px solid var(--borde);
+}
+
+.tabla thead th {
+  font-size: var(--t-2xs);
+  font-weight: 600;
+  color: var(--texto-3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tabla tbody tr:last-child th,
+.tabla tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.tabla tbody th {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.numero {
+  text-align: right !important;
+  white-space: nowrap;
+  padding-left: 10px !important;
+}
+
+.letra {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--superficie-2);
+  border: 1px solid var(--borde-2);
+  font-size: var(--t-2xs);
+  font-weight: 800;
+}
+
+.nombre {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dif {
+  color: var(--texto-3);
+  font-size: var(--t-xs);
+}
+
+.ganadora th,
+.ganadora td {
+  font-weight: 700 !important;
+}
+
+.ganadora .letra {
+  background: var(--ok);
+  border-color: var(--ok);
+  color: #fff;
+}
+
+.marca {
+  display: inline-grid;
+  place-items: center;
+  color: var(--ok);
+}
+
+.nota {
+  font-size: var(--t-xs);
+  color: var(--texto-3);
+  line-height: 1.4;
+}
+
+.elegida {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--superficie-2);
+  border: 1px solid var(--borde);
+  font-size: var(--t-2xs);
+  color: var(--texto-3);
+}
+
+.cifras {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+  margin: 0;
+}
+
+.cifras dt {
+  font-size: var(--t-2xs);
+  color: var(--texto-3);
+}
+
+.cifras dd {
+  margin: 2px 0 0;
+  font-size: var(--t-m);
+  font-weight: 700;
+}

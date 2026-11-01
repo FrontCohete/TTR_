@@ -1102,3 +1102,9 @@
     font-size: var(--t-xl);
   }
 }
+
+/* Minimapa: aclara si es el esquema en línea recta o el trazo por calles (etapa 7) */
+.miniMapaNota {
+  font-weight: 400;
+  color: var(--texto-3);
+}

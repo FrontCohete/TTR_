@@ -554,6 +554,43 @@ export async function obtenerAgente(idEjecucion) {
     mejor_distancia: r.mejor_distancia,
     ruta_optima: r.ruta_optima,
     generacion_mejor: r.generacion_mejor,
+    // etapa 7: sin servidor de ruteo, el modo simulado optimiza solo en línea recta
+    medir: ej.parametros.medir ?? 'mejor_de_tres',
+    metrica: 'recta',
+    distancia_recta_m: r.mejor_distancia,
+    comparacion: {
+      medir: ej.parametros.medir ?? 'mejor_de_tres',
+      ganadora: 'A',
+      aviso: 'En modo simulado no hay distancias por calles: el agente se optimizó en línea recta.',
+      variantes: [
+        {
+          variante: 'A',
+          metrica: 'recta',
+          distancia_calles_m: null,
+          distancia_recta_m: r.mejor_distancia,
+          fitness_m: r.mejor_distancia,
+          generacion_mejor: r.generacion_mejor,
+          ganadora: true,
+        },
+      ],
+    },
+  }
+}
+
+/** Etapa 7: en modo simulado la matriz siempre es en línea recta */
+export async function obtenerDistancias(idEjecucion) {
+  await esperar(80, 160)
+  const ej = buscarEjecucion(idEjecucion)
+  if (!estaTerminada(ej)) throw new ApiError(409, 'El algoritmo de este agente todavía está corriendo.')
+  const { centroides } = await contextoEjecucion(ej)
+  const ids = [...ej.hotspots].sort((a, b) => centroides.get(a).etiqueta - centroides.get(b).etiqueta)
+  return {
+    id_ejecucion: ej.id_ejecucion,
+    metrica: 'recta',
+    ids,
+    distancias_m: ids.map((a) =>
+      ids.map((b) => Math.round(haversine(centroides.get(a).centroide, centroides.get(b).centroide) * 10) / 10),
+    ),
   }
 }
 
@@ -603,6 +640,8 @@ export async function obtenerRuta(idEjecucion) {
       hotspots: orden,
       ruta_cerrada: !!ej.parametros.ruta_cerrada,
       generacion_mejor: r.generacion_mejor,
+      metrica: 'recta',
+      distancia_recta_m: r.mejor_distancia,
     },
   }
 }

@@ -303,6 +303,32 @@ function CampoNumero({ etiqueta, valor, alCambiar, min, max, paso = 1, ayuda }) 
   )
 }
 
+/** Etapa 7: con qué mide el genético las distancias entre hotspots */
+const FORMAS_DE_MEDIR = [
+  {
+    valor: 'mejor_de_tres',
+    etiqueta: 'Mejor de 3',
+    descripcion:
+      'Cada agente corre el genético tres veces (línea recta, calles con sentido y calles con ida y vuelta promedio) y se queda con la ruta más corta por calles. Tarda unas tres veces más.',
+  },
+  {
+    valor: 'recta',
+    etiqueta: 'Recta',
+    descripcion: 'Solo en línea recta entre hotspots (A). Al final la ruta también se mide por calles.',
+  },
+  {
+    valor: 'calles',
+    etiqueta: 'Calles',
+    descripcion:
+      'Solo por calles respetando su sentido (B): ir de un hotspot a otro puede medir distinto que regresar.',
+  },
+  {
+    valor: 'calles_promedio',
+    etiqueta: 'Promedio',
+    descripcion: 'Solo por calles, con el promedio de ida y vuelta de cada tramo (C).',
+  },
+]
+
 function ParametrosAG() {
   const { parametros: p, ponerParametros, restablecerParametros } = useSesion()
   return (
@@ -311,9 +337,25 @@ function ParametrosAG() {
       icono={Dna}
       plegable
       abiertaInicial={false}
-      nota={`${p.tam_poblacion} × ${p.n_generaciones}`}
+      nota={`${p.tam_poblacion} × ${p.n_generaciones} · ${
+        (FORMAS_DE_MEDIR.find((f) => f.valor === (p.medir ?? 'mejor_de_tres')) ?? FORMAS_DE_MEDIR[0]).etiqueta
+      }`}
     >
       <p className={s.ayuda}>Se aplican a todos los agentes. Los valores por defecto funcionan bien para empezar.</p>
+      <div className={s.campo}>
+        <span className={s.etiquetaCampo}>Forma de medir las distancias</span>
+        <Segmentado
+          etiqueta="Forma de medir las distancias"
+          tamano="s"
+          anchoCompleto
+          valor={p.medir ?? 'mejor_de_tres'}
+          alCambiar={(v) => ponerParametros({ medir: v })}
+          opciones={FORMAS_DE_MEDIR.map(({ valor, etiqueta, descripcion }) => ({ valor, etiqueta, descripcion }))}
+        />
+        <span className={s.pistaCampo}>
+          {(FORMAS_DE_MEDIR.find((f) => f.valor === (p.medir ?? 'mejor_de_tres')) ?? FORMAS_DE_MEDIR[0]).descripcion}
+        </span>
+      </div>
       <div className={s.rejillaCampos}>
         <CampoNumero
           etiqueta="Población"

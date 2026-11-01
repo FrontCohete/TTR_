@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react'
 import { motion } from 'motion/react'
 import { ArrowLeft, Flag, House, LoaderCircle, Pause, Play, RotateCcw, Route } from 'lucide-react'
 import { api } from '../../api/index.js'
-import { useAnalisisVigente, useHotspots, useLimite, useRutas, useRutasCalles } from '../../api/consultas.js'
+import { useAgentes, useAnalisisVigente, useHotspots, useLimite, useRutas, useRutasCalles } from '../../api/consultas.js'
 import { useSesion } from '../../store/sesion.js'
 import { useTitulo } from '../../hooks/useTitulo.js'
 import { useEsMovil } from '../../hooks/useMedia.js'
@@ -13,6 +13,7 @@ import PanelAdaptable from '../../components/ui/PanelAdaptable.jsx'
 import Boton from '../../components/ui/Boton.jsx'
 import Segmentado from '../../components/ui/Segmentado.jsx'
 import Aviso from '../../components/ui/Aviso.jsx'
+import ComparacionAG from '../../components/agentes/ComparacionAG.jsx'
 import CapaAgente from './CapaAgente.jsx'
 import { VELOCIDAD_KMH, posicionEn, useSimulacion } from './useSimulacion.js'
 import s from './Simular.module.css'
@@ -24,8 +25,11 @@ const fmtMinutos = (seg) => {
   const m = Math.round(seg / 60)
   return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${m % 60} min`
 }
-/** La ruta trae el trazo por calles (GET /ruta-calles) y no la línea recta (GET /ruta) */
-const esPorCalles = (r) => r?.properties?.distancia_recta_m != null
+/**
+ * La ruta trae el trazo por calles (GET /ruta-calles) y no la línea recta (GET /ruta).
+ * Etapa 7: /ruta también trae distancia_recta_m, así que se distingue por indices_paradas.
+ */
+const esPorCalles = (r) => r?.properties?.indices_paradas != null
 
 export default function Simular() {
   useTitulo('Simular')
@@ -60,6 +64,8 @@ function VistaSimular({ ejecuciones }) {
   const ids = ejecuciones.map((e) => e.id_ejecucion)
   const consultasRecta = useRutas(ids)
   const consultasCalles = useRutasCalles(ids)
+  const consultasAgentes = useAgentes(ids)
+  const conComparacion = consultasAgentes.some((q) => (q.data?.comparacion?.variantes?.length ?? 0) > 1)
 
   // Por cada agente: el trazo por calles; si el servidor de ruteo falló, la línea recta
   const rutas = consultasCalles.map((qc, i) => {
@@ -313,14 +319,24 @@ function VistaSimular({ ejecuciones }) {
         <ul className={s.agentes}>
           {ejecuciones.map((ej, i) =>
             visible(ej) ? (
-              <TarjetaAgente key={ej.id_ejecucion} ej={ej} ruta={rutasEstables[i]} estado={estados[i]} info={info} />
+              <TarjetaAgente
+                key={ej.id_ejecucion}
+                ej={ej}
+                ruta={rutasEstables[i]}
+                estado={estados[i]}
+                info={info}
+                agente={consultasAgentes[i]?.data}
+              />
             ) : null,
           )}
         </ul>
         <p className={s.nota}>
-          Cada agente recorre la ruta más corta que encontró su algoritmo genético. El orden de visita se calculó con
-          distancias en línea recta; el dibujo sigue las calles reales (perfil en automóvil), por eso la distancia por
-          calles es mayor.{' '}
+          Cada agente recorre la ruta más corta que encontró su algoritmo genético.{' '}
+          {conComparacion
+            ? 'El orden de visita salió de «la mejor de tres»: cada agente probó medir en línea recta, por calles con sentido y por calles con ida y vuelta promedio, y se quedó con la ruta más corta por calles.'
+            : 'El orden de visita se calculó con distancias en línea recta.'}{' '}
+          El dibujo sigue las calles reales (perfil en automóvil), por eso la distancia por calles es mayor que en línea
+          recta.{' '}
           {rutasEstables.find(esPorCalles)?.properties.atribucion ?? ''}
         </p>
       </PanelAdaptable>
@@ -328,7 +344,7 @@ function VistaSimular({ ejecuciones }) {
   )
 }
 
-function TarjetaAgente({ ej, ruta, estado, info }) {
+function TarjetaAgente({ ej, ruta, estado, info, agente }) {
   const color = colorGrafo(ej.numero, ruta?.properties.color ?? ej.color)
   if (!ruta) {
     return (
@@ -369,8 +385,8 @@ function TarjetaAgente({ ej, ruta, estado, info }) {
       </div>
       <dl className={s.distancias}>
         <div>
-          <dt>Línea recta (genético)</dt>
-          <dd className="num">{fmtDistancia(calles ? p.distancia_recta_m : p.distancia_m)}</dd>
+          <dt>Línea recta</dt>
+          <dd className="num">{fmtDistancia(p.distancia_recta_m ?? p.distancia_m)}</dd>
         </div>
         <div>
           <dt>Por calles</dt>
@@ -392,6 +408,7 @@ function TarjetaAgente({ ej, ruta, estado, info }) {
           </div>
         )}
       </dl>
+      <ComparacionAG agente={agente} compacto />
       <div className={s.agenteBarra} aria-hidden="true">
         <motion.span initial={false} animate={{ scaleX: fraccion }} transition={{ duration: 0.12, ease: 'linear' }} />
       </div>

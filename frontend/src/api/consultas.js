@@ -71,6 +71,16 @@ export const useGeneraciones = (idEjecucion, habilitado) =>
     ...FIJO,
   })
 
+/** Etapa 7: matriz {metrica, ids, distancias_m} con la que el genético midió las rutas de este agente */
+export const useDistancias = (idEjecucion, habilitado) =>
+  useQuery({
+    queryKey: ['agente', idEjecucion, 'distancias'],
+    queryFn: () => api.obtenerDistancias(idEjecucion),
+    enabled: idEjecucion != null && habilitado,
+    retry: (n, e) => ![404, 409].includes(e?.estado) && n < 1,
+    ...FIJO,
+  })
+
 export const useIndividuos = (idGeneracion) =>
   useQuery({
     queryKey: ['generacion', idGeneracion, 'individuos'],
@@ -103,6 +113,16 @@ export const useRutasCalles = (ids, habilitado = true) =>
       retry: (n, e) => ![404, 409, 503].includes(e?.estado) && n < 1,
       ...FIJO,
     })),
+  })
+
+/** Una sola ruta por calles (vista Rutas, minimapa). Comparte la caché con useRutasCalles (Simular). */
+export const useRutaCalles = (idEjecucion, habilitado = true) =>
+  useQuery({
+    queryKey: ['agente', idEjecucion, 'ruta-calles'],
+    queryFn: () => api.obtenerRutaCalles(idEjecucion),
+    enabled: idEjecucion != null && habilitado,
+    retry: (n, e) => ![404, 409, 503].includes(e?.estado) && n < 1,
+    ...FIJO,
   })
 
 // ---------- Mantenimiento (Inicio) ----------

@@ -7,6 +7,7 @@ import { ETAPAS_AG } from './etapas.js'
 import { NOCHE, sobreBlanco, textoSobre } from '../../lib/colores.js'
 import Boton from '../../components/ui/Boton.jsx'
 import { fmtDistancia, fmtEntero, fmtPct, plural } from '../../lib/formato.js'
+import { TRAMOS_SEGUN_METRICA } from '../../components/agentes/ComparacionAG.jsx'
 import s from './Rutas.module.css'
 
 /** Navegador ‹ 3 de 50 › para recorrer operaciones de una misma etapa */
@@ -87,6 +88,7 @@ export default function DetalleEtapa({
   color,
   parametros,
   distancia,
+  metrica = 'recta',
   cerrada,
   nNodos,
   numeroGrafo,
@@ -127,7 +129,16 @@ export default function DetalleEtapa({
       />
     )
   } else if (pos.etapa === 1) {
-    contenido = <Evaluacion actual={actual} info={info} color={color} distancia={distancia} cerrada={cerrada} />
+    contenido = (
+      <Evaluacion
+        actual={actual}
+        info={info}
+        color={color}
+        distancia={distancia}
+        metrica={metrica}
+        cerrada={cerrada}
+      />
+    )
   } else if (pos.etapa === 2) {
     contenido = (
       <SeleccionAzar
@@ -295,14 +306,21 @@ function Permutacion({ actual, info, color, cerrada, nNodos, P, numeroGrafo }) {
 }
 
 // ---------------------------------------------------------------- 2 · Función objetivo
-function Evaluacion({ actual, info, color, distancia, cerrada }) {
+function Evaluacion({ actual, info, color, distancia, metrica, cerrada }) {
   const mejor = actual.individuos.reduce((m, x) => (x.distancia < m.distancia ? x : m), actual.individuos[0])
   return (
     <>
       <p className={s.explicacion}>
-        La aptitud de una ruta es su <strong>distancia total</strong>: la suma de los tramos en línea recta entre
-        hotspots consecutivos{cerrada ? ', más el regreso al primero' : ''}. Menos distancia es mejor.
+        La aptitud de una ruta es su <strong>distancia total</strong>:{' '}
+        {TRAMOS_SEGUN_METRICA[metrica] ?? TRAMOS_SEGUN_METRICA.recta}
+        {cerrada ? ', más el regreso al primero' : ''}. Menos distancia es mejor.
       </p>
+      {metrica !== 'recta' && (
+        <p className={s.notaPequena}>
+          Este agente probó tres formas de medir (línea recta, calles con sentido y calles con ida y vuelta promedio) y
+          aquí se reproduce la que dio la ruta más corta por calles.
+        </p>
+      )}
       <p className={s.formula} aria-label="Fórmula de la función objetivo">
         f(π) = d(π<sub>1</sub>, π<sub>2</sub>) + d(π<sub>2</sub>, π<sub>3</sub>) + … +{' '}
         {cerrada ? (

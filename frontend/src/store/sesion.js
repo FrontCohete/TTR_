@@ -58,6 +58,8 @@ export const PARAMETROS_AG = {
   op_mutacion: 'inversion',
   semilla: 42,
   ruta_cerrada: true,
+  /** Etapa 7: mejor_de_tres (A, B y C) · recta · calles · calles_promedio */
+  medir: 'mejor_de_tres',
 }
 
 export const MAX_GRAFOS = 5
@@ -98,8 +100,13 @@ export const useSesion = create(
       name: 'ttr-sesion',
       // Versión 2: nuevos valores por defecto del genético. Una sesión guardada con la versión 1
       // recibe los parámetros nuevos sin tener que pulsar «Restablecer valores».
-      version: 2,
-      migrate: (estado, version) => (version < 2 ? { ...estado, parametros: PARAMETROS_AG } : estado),
+      // Versión 3 (etapa 7): se agrega la forma de medir, «la mejor de tres» por defecto.
+      version: 3,
+      migrate: (estado, version) => {
+        if (version < 2) return { ...estado, parametros: PARAMETROS_AG }
+        if (version < 3) return { ...estado, parametros: { ...estado.parametros, medir: 'mejor_de_tres' } }
+        return estado
+      },
       storage: createJSONStorage(() => almacenSeguro),
     },
   ),

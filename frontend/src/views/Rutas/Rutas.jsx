@@ -3,7 +3,15 @@ import { useNavigate } from 'react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { api } from '../../api/index.js'
 import { ArrowLeft, LoaderCircle, Navigation, Network, TriangleAlert } from 'lucide-react'
-import { useAgentes, useAnalisisVigente, useGeneraciones, useHotspots, useIndividuos } from '../../api/consultas.js'
+import {
+  useAgentes,
+  useAnalisisVigente,
+  useDistancias,
+  useGeneraciones,
+  useHotspots,
+  useIndividuos,
+  useRutaCalles,
+} from '../../api/consultas.js'
 import { useSesion } from '../../store/sesion.js'
 import { useTitulo } from '../../hooks/useTitulo.js'
 import { useEsEscritorio, useEsMovil } from '../../hooks/useMedia.js'
@@ -11,6 +19,7 @@ import { haversine } from '../../lib/geo.js'
 import { colorGrafo, textoSobre } from '../../lib/colores.js'
 import { fmtDistancia, fmtEntero, fmtPct, plural } from '../../lib/formato.js'
 import Boton from '../../components/ui/Boton.jsx'
+import ComparacionAG from '../../components/agentes/ComparacionAG.jsx'
 import FlujoAG from './FlujoAG.jsx'
 import DetalleEtapa from './DetalleEtapa.jsx'
 import Reproductor from './Reproductor.jsx'
@@ -67,6 +76,10 @@ function VistaRutas({ ejecuciones }) {
   const cerrada = parametros?.ruta_cerrada !== false
 
   const generaciones = useGeneraciones(ej.id_ejecucion, terminado)
+  const matriz = useDistancias(ej.id_ejecucion, terminado)
+  // La ruta final dibujada por calles (OSRM; se pide una vez y queda guardada). Si no hay, el minimapa
+  // sigue con el esquema en línea recta.
+  const rutaCalles = useRutaCalles(ej.id_ejecucion, terminado)
   const total = generaciones.data ? generaciones.data.length - 1 : (parametros?.n_generaciones ?? 0)
   const r = useReproductor(generaciones.data ? total : 0, ej.id_ejecucion)
   const { gen } = r.pos
@@ -99,7 +112,18 @@ function VistaRutas({ ejecuciones }) {
     return m
   }, [hotspots.data])
 
+  // Metros del tramo a → b con la misma vara que usó el genético (etapa 7: línea recta o por calles,
+  // donde ida y vuelta pueden ser distintas). Si la matriz no llega, en línea recta.
   const distancia = useMemo(() => {
+    const m = matriz.data
+    if (m?.ids && m.distancias_m) {
+      const pos = new Map(m.ids.map((h, i) => [h, i]))
+      return (a, b) => {
+        const i = pos.get(a)
+        const j = pos.get(b)
+        return i != null && j != null ? m.distancias_m[i][j] : 0
+      }
+    }
     const cache = new Map()
     return (a, b) => {
       const k = a < b ? `${a}-${b}` : `${b}-${a}`
@@ -110,7 +134,7 @@ function VistaRutas({ ejecuciones }) {
       }
       return cache.get(k)
     }
-  }, [info])
+  }, [info, matriz.data])
 
   const resumen = generaciones.data?.[gen]
   const resumenPrevio = gen > 0 ? generaciones.data?.[gen - 1] : null
@@ -246,6 +270,7 @@ function VistaRutas({ ejecuciones }) {
               color={color}
               parametros={parametros}
               distancia={distancia}
+              metrica={agente?.metrica ?? 'recta'}
               cerrada={cerrada}
               nNodos={ej.n_nodos ?? ej.hotspots?.length}
               numeroGrafo={ej.numero}
@@ -263,6 +288,8 @@ function VistaRutas({ ejecuciones }) {
                 info={info}
                 cerrada={cerrada}
                 nodos={ej.hotspots}
+                agente={agente}
+                rutaCalles={rutaCalles.data}
               />
             )}
           </div>
@@ -279,6 +306,8 @@ function VistaRutas({ ejecuciones }) {
                 info={info}
                 cerrada={cerrada}
                 nodos={ej.hotspots}
+                agente={agente}
+                rutaCalles={rutaCalles.data}
               />
             </div>
           )}
@@ -290,7 +319,23 @@ function VistaRutas({ ejecuciones }) {
   )
 }
 
-function Lateral({ resumen, mejorHistorico, mejoraTotal, generaciones, gen, total, color, info, cerrada, nodos }) {
+function Lateral({
+  resumen,
+  mejorHistorico,
+  mejoraTotal,
+  generaciones,
+  gen,
+  total,
+  color,
+  info,
+  cerrada,
+  nodos,
+  agente,
+  rutaCalles,
+}) {
+  // Desde la generación en que el genético encontró su ruta final, el minimapa la dibuja por calles
+  const final = agente?.generacion_mejor != null && gen >= agente.generacion_mejor
+  const trazo = final && rutaCalles?.properties?.indices_paradas ? rutaCalles.geometry.coordinates : null
   return (
     <aside className={s.lateral} aria-label="Evolución del agente">
       <div className={s.marcador}>
@@ -315,8 +360,17 @@ function Lateral({ resumen, mejorHistorico, mejoraTotal, generaciones, gen, tota
           )}
         </div>
       </div>
+      <ComparacionAG agente={agente} />
       <GraficaAptitud generaciones={generaciones} hasta={gen} color={color} />
-      <MiniMapaRuta perm={resumen?.mejor_permutacion} info={info} color={color} cerrada={cerrada} nodos={nodos} />
+      <MiniMapaRuta
+        perm={resumen?.mejor_permutacion}
+        info={info}
+        color={color}
+        cerrada={cerrada}
+        nodos={nodos}
+        trazo={trazo}
+        generacionFinal={agente?.generacion_mejor}
+      />
     </aside>
   )
 }
