@@ -6,6 +6,7 @@
     GET  /api/generaciones/{id}/individuos     las rutas y operaciones de una generación (vista Rutas)
     GET  /api/agentes/{id}/ruta                la mejor ruta como LineString (vista Simular)
     GET  /api/agentes/{id}/ruta-calles         la misma ruta dibujada por calles (OSRM, se guarda; etapa 6)
+    GET  /api/agentes/{id}/distancias          la matriz con la que se optimizó la ganadora (etapa 7)
     POST /api/simulaciones                     registra un recorrido simulado
 """
 from typing import Literal
@@ -31,6 +32,8 @@ class ParametrosAG(BaseModel):
     op_mutacion: Literal["swap", "inversion"] = "inversion"
     semilla: int = Field(42, ge=0, le=999_999)
     ruta_cerrada: bool = True
+    # etapa 7: con qué medir las distancias (por defecto, las tres y gana la más corta por calles)
+    medir: Literal["mejor_de_tres", "recta", "calles", "calles_promedio"] = "mejor_de_tres"
 
 
 class PedidoAgentes(BaseModel):
@@ -61,10 +64,12 @@ def lanzar(ids: list[int]) -> None:
 
 @router.post("/agentes", status_code=202, summary="Generar un agente por grafo de la partición")
 def crear(pedido: PedidoAgentes, tareas: BackgroundTasks, con=Depends(conexion)):
-    p = AG.Parametros(**pedido.parametros.model_dump(), n_elite=1)      # élite fija
+    datos = pedido.parametros.model_dump()
+    medir = datos.pop("medir")
+    p = AG.Parametros(**datos, n_elite=1)                               # élite fija
     try:
         with transaccion(con):
-            creadas = S.crear_ejecuciones(con, pedido.id_particion, p)
+            creadas = S.crear_ejecuciones(con, pedido.id_particion, p, medir)
     except AG.ParametrosInvalidos as error:
         raise HTTPException(status_code=422, detail=str(error))
     except S.NoEncontrado as error:
@@ -102,6 +107,12 @@ def individuos(id_generacion: int, con=Depends(conexion)):
 @router.get("/agentes/{id_ejecucion}/ruta", summary="La mejor ruta del agente (LineString)")
 def ruta(id_ejecucion: int, con=Depends(conexion)):
     return _responder(S.ruta, con, id_ejecucion)
+
+
+@router.get("/agentes/{id_ejecucion}/distancias", summary="Matriz de distancias con la que se optimizó el agente")
+def distancias(id_ejecucion: int, con=Depends(conexion)):
+    """Etapa 7: en línea recta (A), por calles con sentido (B) o por calles con el promedio de ida y vuelta (C)."""
+    return _responder(S.distancias, con, id_ejecucion)
 
 
 @router.get("/agentes/{id_ejecucion}/ruta-calles", summary="La mejor ruta del agente dibujada por calles (OSRM)")

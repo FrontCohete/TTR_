@@ -5,6 +5,7 @@ ejecución guardada. Se usan parámetros chicos (20 rutas × 15 generaciones) pa
 """
 from contextlib import contextmanager
 
+import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import text
@@ -14,10 +15,18 @@ from app.rutas import agentes as R
 from app.servicios import agentes as S
 from app.servicios import genetico as AG
 from app.servicios import particion as P
+from app.servicios import matriz_calles as M
 from app.servicios.particion import haversine
 from pruebas.test_insercion import con  # noqa: F401  (fixture: conexión que se deshace)
+from pruebas.test_matriz_calles import escuadra
 
 CHICO = AG.Parametros(tam_poblacion=20, n_generaciones=15)
+
+
+def tabla_falsa(coords):
+    """Matriz por calles inventada (en escuadra, 10 % más hacia el este): las pruebas no usan internet."""
+    d = np.array([[0.0 if i == j else escuadra(a, b) for j, b in enumerate(coords)] for i, a in enumerate(coords)])
+    return d, d / 8.0
 
 
 class MotorDePrueba:
@@ -39,7 +48,12 @@ def particion(con):
     # los agentes reales se dan por liberados (solo en esta transacción): así las pruebas no
     # borran cientos de miles de rutas cada vez y siguen siendo rápidas
     con.execute(text("UPDATE ejecucion_ag SET rutas_borradas = true WHERE NOT rutas_borradas"))
-    return P.nueva_particion(con, 2)
+    datos = P.nueva_particion(con, 2)
+    # etapa 7: la matriz por calles del análisis, inventada (solo en esta transacción, sin internet)
+    analisis = con.execute(text("SELECT id_analisis FROM analisis_hdbscan WHERE vigente")).scalar()
+    con.execute(text("DELETE FROM matriz_calles WHERE id_analisis = :a"), {"a": analisis})
+    M.obtener(con, analisis, tabla_fn=tabla_falsa)
+    return datos
 
 
 @pytest.fixture
@@ -77,7 +91,9 @@ def test_ejecutar_guarda_todo(con, corridos):
         assert a["parametros"]["n_elite"] == 1 and a["parametros"]["tam_poblacion"] == 20
         gens = S.generaciones(con, c["id_ejecucion"])
         assert [g["numero"] for g in gens] == list(range(16))
-        assert min(g["mejor_fitness"] for g in gens) == pytest.approx(a["mejor_distancia"], abs=0.2)
+        gano = next(v for v in a["comparacion"]["variantes"] if v["ganadora"])      # etapa 7
+        assert min(g["mejor_fitness"] for g in gens) == pytest.approx(gano["fitness_m"], abs=0.2)
+        assert a["mejor_distancia"] == pytest.approx(gano["distancia_calles_m"], abs=0.2)
         filas = con.execute(text("""
             SELECT count(*) FROM individuo JOIN generacion USING (id_generacion) WHERE id_ejecucion = :e
         """), {"e": c["id_ejecucion"]}).scalar()
@@ -114,7 +130,7 @@ def test_ruta_cerrada_empieza_en_la_mayor_carga_y_mide_lo_reportado(con, corrido
         """), {"h": hs}).all()
         assert hs[0] == max(info, key=lambda x: x.carga).id_hotspot
         largo = sum(haversine(coords[i][1], coords[i][0], coords[i + 1][1], coords[i + 1][0]) for i in range(len(coords) - 1))
-        assert largo == pytest.approx(r["properties"]["distancia_m"], abs=5)       # coordenadas redondeadas a 6 decimales
+        assert largo == pytest.approx(r["properties"]["distancia_recta_m"], abs=5)  # coordenadas redondeadas a 6 decimales
         assert r["properties"]["orden"][0].startswith("H-")
 
 
