@@ -188,13 +188,18 @@ export function ejecutarAG({ nodos, distancia, parametros }) {
         let p2 = azar.entero(n)
         while (p2 === p1) p2 = azar.entero(n)
         if (p1 > p2) [p1, p2] = [p2, p1]
-        if (op_mutacion === 'inversion') {
+        // mixta (versión solo-calles): inversión si p1 + p2 es par, inserción si es impar
+        const tipo = op_mutacion === 'mixta' ? ((p1 + p2) % 2 === 0 ? 'inversion' : 'insercion') : op_mutacion
+        if (tipo === 'inversion') {
           hijo = [...hijo.slice(0, p1), ...hijo.slice(p1, p2 + 1).reverse(), ...hijo.slice(p2 + 1)]
+        } else if (tipo === 'insercion') {
+          hijo = hijo.slice()
+          hijo.splice(p2, 0, hijo.splice(p1, 1)[0])
         } else {
           hijo = hijo.slice()
           ;[hijo[p1], hijo[p2]] = [hijo[p2], hijo[p1]]
         }
-        mutaciones.push({ individuo: i, posiciones: [p1, p2], tipo: op_mutacion })
+        mutaciones.push({ individuo: i, posiciones: [p1, p2], tipo })
         origen = 'mutacion'
       }
       nueva.push({

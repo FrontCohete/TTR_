@@ -5,10 +5,15 @@ import { iconoEstacion } from '../../components/mapa/CapaHotspots.jsx'
 import { useLimite } from '../../api/consultas.js'
 import s from './Rutas.module.css'
 
-/** Mapa pequeño con la mejor ruta de la generación que se está mostrando */
-export default function MiniMapaRuta({ perm, info, color, cerrada, nodos }) {
+/**
+ * Mapa pequeño con la mejor ruta de la generación que se está mostrando.
+ * Mientras el genético busca es un diagrama (une los hotspots en el orden de visita; la distancia ya es por
+ * calles). En la última generación (`trazo`) dibuja la ruta final, ya pulida, por las calles reales.
+ */
+export default function MiniMapaRuta({ perm, info, color, cerrada, nodos, trazo, ultima }) {
   const limite = useLimite()
   const linea = useMemo(() => {
+    if (trazo?.length > 1) return trazo.map(([lon, lat]) => [lat, lon])
     if (!perm?.length || !info) return []
     const pts = perm
       .map((h) => info.get(h)?.centroide)
@@ -16,7 +21,7 @@ export default function MiniMapaRuta({ perm, info, color, cerrada, nodos }) {
       .map(([lon, lat]) => [lat, lon])
     if (cerrada && pts.length > 1) pts.push(pts[0])
     return pts
-  }, [perm, info, cerrada])
+  }, [perm, info, cerrada, trazo])
 
   const encuadre = useMemo(() => {
     const pts = (nodos ?? []).map((h) => info?.get(h)?.centroide).filter(Boolean)
@@ -33,7 +38,14 @@ export default function MiniMapaRuta({ perm, info, color, cerrada, nodos }) {
 
   return (
     <figure className={s.miniMapa}>
-      <figcaption className={s.graficaTitulo}>Mejor ruta de esta generación</figcaption>
+      <figcaption className={s.graficaTitulo}>
+        {trazo ? 'Ruta final pulida, por calles' : 'Mejor ruta de esta generación'}
+        <span className={s.miniMapaNota}>
+          {trazo
+            ? ' · el recorrido real del agente'
+            : ` · diagrama del orden de visita${ultima ? `; por calles en la generación ${ultima}` : ''}`}
+        </span>
+      </figcaption>
       <div className={s.miniMapaArea}>
         <MapaGAM
           limite={limite.data}

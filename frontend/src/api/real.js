@@ -23,6 +23,8 @@ export const crearAgentes = (idParticion, parametros) =>
 export const obtenerAgente = (idEjecucion) => solicitar(`/agentes/${idEjecucion}`)
 export const obtenerGeneraciones = (idEjecucion) => solicitar(`/agentes/${idEjecucion}/generaciones`)
 export const obtenerIndividuos = (idGeneracion) => solicitar(`/generaciones/${idGeneracion}/individuos`)
+/** Versión solo-calles: la matriz por calles (con sentido) con la que el genético midió las rutas */
+export const obtenerDistancias = (idEjecucion) => solicitar(`/agentes/${idEjecucion}/distancias`)
 
 // ---------- Vista Simular ----------
 export const obtenerRuta = (idEjecucion) => solicitar(`/agentes/${idEjecucion}/ruta`)

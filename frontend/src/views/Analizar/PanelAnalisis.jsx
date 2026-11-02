@@ -303,6 +303,19 @@ function CampoNumero({ etiqueta, valor, alCambiar, min, max, paso = 1, ayuda }) 
   )
 }
 
+/** Versión solo-calles: la mixta es la recomendada (experimentos del 1 nov 2026) */
+const MUTACIONES = [
+  {
+    valor: 'mixta',
+    etiqueta: 'Mixta',
+    descripcion:
+      'Recomendada. Según las posiciones sorteadas, invierte un tramo o cambia de lugar un hotspot. Funciona bien con calles de un sentido.',
+  },
+  { valor: 'inversion', etiqueta: 'Inversión', descripcion: 'Invierte el orden de un tramo de la ruta.' },
+  { valor: 'insercion', etiqueta: 'Inserción', descripcion: 'Saca un hotspot y lo mete más adelante, sin voltear nada.' },
+  { valor: 'swap', etiqueta: 'Intercambio', descripcion: 'Dos hotspots cambian de lugar.' },
+]
+
 function ParametrosAG() {
   const { parametros: p, ponerParametros, restablecerParametros } = useSesion()
   return (
@@ -314,6 +327,11 @@ function ParametrosAG() {
       nota={`${p.tam_poblacion} × ${p.n_generaciones}`}
     >
       <p className={s.ayuda}>Se aplican a todos los agentes. Los valores por defecto funcionan bien para empezar.</p>
+      <p className={s.ayuda}>
+        Las distancias son <strong>por calles, respetando los sentidos</strong>: ir de un hotspot a otro puede medir
+        distinto que regresar. Al terminar, la mejor ruta se <strong>pule</strong> moviendo de lugar hotspots sin voltear
+        tramos.
+      </p>
       <div className={s.rejillaCampos}>
         <CampoNumero
           etiqueta="Población"
@@ -386,13 +404,12 @@ function ParametrosAG() {
         <Segmentado
           etiqueta="Operador de mutación"
           tamano="s"
+          anchoCompleto
           valor={p.op_mutacion}
           alCambiar={(v) => ponerParametros({ op_mutacion: v })}
-          opciones={[
-            { valor: 'swap', etiqueta: 'Intercambio' },
-            { valor: 'inversion', etiqueta: 'Inversión' },
-          ]}
+          opciones={MUTACIONES.map(({ valor, etiqueta, descripcion }) => ({ valor, etiqueta, descripcion }))}
         />
+        <span className={s.pistaCampo}>{(MUTACIONES.find((m) => m.valor === p.op_mutacion) ?? MUTACIONES[0]).descripcion}</span>
       </div>
       <Interruptor
         etiqueta="Regresar al punto de partida"

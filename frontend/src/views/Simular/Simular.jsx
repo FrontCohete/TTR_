@@ -24,8 +24,11 @@ const fmtMinutos = (seg) => {
   const m = Math.round(seg / 60)
   return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${m % 60} min`
 }
-/** La ruta trae el trazo por calles (GET /ruta-calles) y no la línea recta (GET /ruta) */
-const esPorCalles = (r) => r?.properties?.distancia_recta_m != null
+/**
+ * La ruta trae el trazo por calles (GET /ruta-calles) y no la línea recta (GET /ruta).
+ * Versión solo-calles: /ruta también trae distancia_recta_m, así que se distingue por indices_paradas.
+ */
+const esPorCalles = (r) => r?.properties?.indices_paradas != null
 
 export default function Simular() {
   useTitulo('Simular')
@@ -319,8 +322,8 @@ function VistaSimular({ ejecuciones }) {
         </ul>
         <p className={s.nota}>
           Cada agente recorre la ruta más corta que encontró su algoritmo genético. El orden de visita se calculó con
-          distancias en línea recta; el dibujo sigue las calles reales (perfil en automóvil), por eso la distancia por
-          calles es mayor.{' '}
+          las distancias por calles, respetando los sentidos, y se pulió al final; el dibujo sigue esas mismas calles
+          (perfil en automóvil). La línea recta se muestra solo para comparar.{' '}
           {rutasEstables.find(esPorCalles)?.properties.atribucion ?? ''}
         </p>
       </PanelAdaptable>
@@ -369,8 +372,8 @@ function TarjetaAgente({ ej, ruta, estado, info }) {
       </div>
       <dl className={s.distancias}>
         <div>
-          <dt>Línea recta (genético)</dt>
-          <dd className="num">{fmtDistancia(calles ? p.distancia_recta_m : p.distancia_m)}</dd>
+          <dt>Línea recta</dt>
+          <dd className="num">{fmtDistancia(p.distancia_recta_m ?? p.distancia_m)}</dd>
         </div>
         <div>
           <dt>Por calles</dt>

@@ -1,16 +1,24 @@
 """Algoritmo genético de cada agente (etapa 5): el orden de visita de los hotspots de un grafo.
 
 Traducción de `frontend/src/mocks/genetico.js` con las decisiones de DECISIONES_ETAPA5_GENETICO.md:
-  * individuo = permutación de los hotspots; aptitud = distancia total (haversine, en metros) del
-    circuito, con regreso al inicio si `ruta_cerrada`; menos es mejor;
+  * individuo = permutación de los hotspots; aptitud = distancia total del circuito con la matriz D
+    (desde la versión solo-calles: metros por calles con sentido, D[i][j] ≠ D[j][i]), con regreso al
+    inicio si `ruta_cerrada`; menos es mejor;
   * generación 0: P permutaciones al azar;
   * para cada hijo h = 0 … P − 1 − n_elite: dos torneos de K participantes con reemplazo
     (torneos[2h] da el padre A, torneos[2h+1] el B) → cruce OX (o PMX) con probabilidad
-    `prob_cruce` y cortes [c1, c2) → mutación por inversión (o swap) con probabilidad `prob_mutacion`;
+    `prob_cruce` y cortes [c1, c2) → mutación con probabilidad `prob_mutacion`:
+      inversion (voltea un tramo) · insercion (saca un hotspot y lo mete más adelante, sin voltear)
+      · mixta (inversión si a + b es par, inserción si es impar; por defecto) · swap (intercambio);
   * élite: las `n_elite` mejores rutas de la generación anterior pasan intactas a las ÚLTIMAS
     posiciones (origen "elite", padre_1 = su posición anterior, padre_2 = None);
   * resultado: la mejor ruta HISTÓRICA (`generacion_mejor` = la primera vez que apareció);
   * reproducible: numpy.random.default_rng(semilla).
+
+Pulido final (`pulir`, versión solo-calles, 1 nov 2026): búsqueda local or-opt CON SENTIDO sobre la
+mejor ruta: mueve 1, 2 o 3 hotspots seguidos a otra posición sin voltearlos mientras la ruta se
+acorte. Se aplica fuera de `ejecutar_ag` (agentes.py), así que no altera la evolución registrada.
+Mixta + pulido salió de experimento_mutacion.py y experimento_grandes.py (PLAN_SOLO_CALLES.md).
 
 No toca la base ni FastAPI. Para no gastar memoria, cada generación se guarda en arreglos de NumPy
 (índices 0 … n − 1); los diccionarios del contrato de la vista Rutas se arman solo al pedirlos.
@@ -25,6 +33,7 @@ import numpy as np
 LIMITE_POBLACION_X_GENERACIONES = 100_000
 ORIGENES = ("aleatorio", "cruce", "mutacion", "elite")      # códigos 0, 1, 2, 3
 ALEATORIO, CRUCE, MUTACION, ELITE = range(4)
+MUTACIONES = ("mixta", "inversion", "insercion", "swap")
 
 
 class ParametrosInvalidos(ValueError):
@@ -39,7 +48,7 @@ class Parametros:
     prob_cruce: float = 0.9
     prob_mutacion: float = 0.5
     op_cruce: str = "OX"
-    op_mutacion: str = "inversion"
+    op_mutacion: str = "mixta"
     semilla: int = 42
     ruta_cerrada: bool = True
     n_elite: int = 1
@@ -62,7 +71,7 @@ class Parametros:
             (0 <= self.prob_cruce <= 1, "La probabilidad de cruce debe estar entre 0 y 1."),
             (0 <= self.prob_mutacion <= 1, "La probabilidad de mutación debe estar entre 0 y 1."),
             (self.op_cruce in ("OX", "PMX"), "El cruce debe ser OX o PMX."),
-            (self.op_mutacion in ("inversion", "swap"), "La mutación debe ser inversion o swap."),
+            (self.op_mutacion in MUTACIONES, "La mutación debe ser mixta, inversion, insercion o swap."),
             (0 <= self.semilla <= 999_999, "La semilla debe estar entre 0 y 999,999."),
             (0 <= self.n_elite < self.tam_poblacion, "La élite debe ser menor que la población."),
         ]
@@ -111,6 +120,25 @@ def intercambiar(p: list, a: int, b: int) -> list:
     q = list(p)
     q[a], q[b] = q[b], q[a]
     return q
+
+
+def insertar(p: list, a: int, b: int) -> list:
+    """Saca el hotspot de la posición a y lo mete en la posición b (a < b). No voltea ningún tramo."""
+    q = list(p)
+    q.insert(b, q.pop(a))
+    return q
+
+
+def tipo_mixta(a: int, b: int) -> str:
+    """Qué hace la mutación mixta con las posiciones a y b: inversión si a + b es par, si no inserción."""
+    return "inversion" if (a + b) % 2 == 0 else "insercion"
+
+
+def mixta(p: list, a: int, b: int) -> list:
+    return invertir(p, a, b) if tipo_mixta(a, b) == "inversion" else insertar(p, a, b)
+
+
+OPERADOR_MUTACION = {"inversion": invertir, "insercion": insertar, "mixta": mixta, "swap": intercambiar}
 
 
 def distancias(pob: np.ndarray, D: np.ndarray, cerrada: bool) -> np.ndarray:
@@ -181,12 +209,13 @@ class Resultado:
             cruces.append({"padres": [int(g.ganadores[2 * h]), int(g.ganadores[2 * h + 1])],
                            "puntos_corte": [int(c1), int(c2)] if aplicado else None,
                            "hijo": h, "aplicado": aplicado})
-        tipo = self.parametros.op_mutacion
+        op = self.parametros.op_mutacion
+        tipo = (lambda a, b: tipo_mixta(a, b)) if op == "mixta" else (lambda a, b: op)
         return {
             "seleccion_azar": [int(x) for x in g.participantes.ravel()],
             "torneos": torneos,
             "cruces": cruces,
-            "mutaciones": [{"individuo": h, "posiciones": [a, b], "tipo": tipo} for h, a, b in g.mutaciones],
+            "mutaciones": [{"individuo": h, "posiciones": [a, b], "tipo": tipo(a, b)} for h, a, b in g.mutaciones],
         }
 
 
@@ -209,7 +238,7 @@ def ejecutar_ag(ids: list[int], D: np.ndarray, parametros: Parametros | None = N
     H = P - E                                            # hijos que pasan por torneo y cruce
     rng = np.random.default_rng(p.semilla)
     cruzar = cruce_pmx if p.op_cruce == "PMX" else cruce_ox
-    mutar = invertir if p.op_mutacion == "inversion" else intercambiar
+    mutar = OPERADOR_MUTACION[p.op_mutacion]
     t0 = time.perf_counter()
 
     pob = np.argsort(rng.random((P, n)), axis=1).astype(np.int32) if n > 1 else np.zeros((P, n), np.int32)
@@ -331,3 +360,74 @@ def prioridad_hotspots(hotspots: list[dict]) -> dict[int, tuple]:
     return {int(h["id_hotspot"]): (float(h["n_puntos"]) * float(h["indice_gravedad"] or 0), int(h["n_puntos"]),
                                    -int(h["etiqueta"]))
             for h in hotspots}
+
+
+# ------------------------------------------------------------------ pulido final (or-opt con sentido)
+def largo(orden: list[int], D, cerrada: bool = True) -> float:
+    """Metros de recorrer `orden` (índices de D) respetando la dirección de cada tramo."""
+    d = sum(float(D[a][b]) for a, b in zip(orden, orden[1:]))
+    if cerrada and len(orden) > 1:
+        d += float(D[orden[-1]][orden[0]])
+    return d
+
+
+def _or_opt(t: list[int], D: list[list[float]], movimientos: list, max_pasadas: int, fijo: int | None = None) -> list[int]:
+    """Circuito cerrado. Para cada segmento de 1–3 hotspots, el mejor lugar donde reinsertarlo sin voltearlo.
+
+    `fijo`: un nodo que nunca se mueve (el ficticio que cierra una ruta abierta).
+    """
+    t = list(t)
+    n = len(t)
+    for _ in range(max_pasadas):
+        mejoro = False
+        for L in (1, 2, 3):
+            if L >= n - 1:
+                break
+            i = 0
+            while i < n:
+                seg = [t[(i + k) % n] for k in range(L)]
+                if fijo is not None and fijo in seg:
+                    i += 1
+                    continue
+                prev, nxt = t[(i - 1) % n], t[(i + L) % n]
+                quita = D[prev][seg[0]] + D[seg[-1]][nxt] - D[prev][nxt]
+                resto = [t[(i + L + k) % n] for k in range(n - L)]       # empieza en nxt, termina en prev
+                mejor_j, mejor_d = -1, -1e-7
+                for j in range(n - L - 1):                               # entre resto[j] y resto[j + 1]
+                    u, v = resto[j], resto[j + 1]
+                    d = D[u][seg[0]] + D[seg[-1]][v] - D[u][v] - quita
+                    if d < mejor_d:
+                        mejor_j, mejor_d = j, d
+                if mejor_j >= 0:
+                    movimientos.append((seg, resto[mejor_j], resto[mejor_j + 1], -mejor_d))
+                    t = resto[:mejor_j + 1] + seg + resto[mejor_j + 1:]
+                    mejoro = True
+                i += 1
+        if not mejoro:
+            break
+    return t
+
+
+def pulir(orden: list[int], D, cerrada: bool = True, max_pasadas: int = 60) -> tuple[list[int], list[dict]]:
+    """Pulido final: or-opt con sentido sobre una ruta (índices de D). Nunca la alarga.
+
+    Devuelve (ruta pulida, movimientos [{segmento, entre: [u, v], ahorro_m}]). En una ruta abierta,
+    `None` en `entre` significa «al inicio» o «al final».
+    """
+    n = len(orden)
+    if n < 4:
+        return list(orden), []
+    Dl = np.asarray(D, dtype=float).tolist()
+    crudos: list = []
+    if cerrada:
+        t = _or_opt(orden, Dl, crudos, max_pasadas)
+    else:                                   # ruta abierta: un nodo ficticio a distancia 0 la cierra
+        for fila in Dl:
+            fila.append(0.0)
+        Dl.append([0.0] * (n + 1))
+        c = _or_opt(list(orden) + [n], Dl, crudos, max_pasadas, fijo=n)
+        k = c.index(n)
+        t = c[k + 1:] + c[:k]
+    movimientos = [{"segmento": list(seg), "entre": [None if u == n else u, None if v == n else v],
+                    "ahorro_m": round(float(ahorro), 1)} for seg, u, v, ahorro in crudos]
+    return t, movimientos

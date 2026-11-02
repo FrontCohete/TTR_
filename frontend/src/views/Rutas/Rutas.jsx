@@ -3,7 +3,15 @@ import { useNavigate } from 'react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { api } from '../../api/index.js'
 import { ArrowLeft, LoaderCircle, Navigation, Network, TriangleAlert } from 'lucide-react'
-import { useAgentes, useAnalisisVigente, useGeneraciones, useHotspots, useIndividuos } from '../../api/consultas.js'
+import {
+  useAgentes,
+  useAnalisisVigente,
+  useDistancias,
+  useGeneraciones,
+  useHotspots,
+  useIndividuos,
+  useRutaCalles,
+} from '../../api/consultas.js'
 import { useSesion } from '../../store/sesion.js'
 import { useTitulo } from '../../hooks/useTitulo.js'
 import { useEsEscritorio, useEsMovil } from '../../hooks/useMedia.js'
@@ -67,6 +75,9 @@ function VistaRutas({ ejecuciones }) {
   const cerrada = parametros?.ruta_cerrada !== false
 
   const generaciones = useGeneraciones(ej.id_ejecucion, terminado)
+  // Versión solo-calles: la matriz con la que midió el genético (por calles, con sentido) y la ruta final por calles
+  const matriz = useDistancias(ej.id_ejecucion, terminado)
+  const rutaCalles = useRutaCalles(ej.id_ejecucion, terminado)
   const total = generaciones.data ? generaciones.data.length - 1 : (parametros?.n_generaciones ?? 0)
   const r = useReproductor(generaciones.data ? total : 0, ej.id_ejecucion)
   const { gen } = r.pos
@@ -99,7 +110,18 @@ function VistaRutas({ ejecuciones }) {
     return m
   }, [hotspots.data])
 
+  // Metros del tramo a → b con la misma vara que el genético: por calles y en ESA dirección
+  // (de a a b puede medir distinto que de b a a). Mientras llega la matriz, en línea recta.
   const distancia = useMemo(() => {
+    const m = matriz.data
+    if (m?.ids && m.distancias_m) {
+      const pos = new Map(m.ids.map((h, i) => [h, i]))
+      return (a, b) => {
+        const i = pos.get(a)
+        const j = pos.get(b)
+        return i != null && j != null ? m.distancias_m[i][j] : 0
+      }
+    }
     const cache = new Map()
     return (a, b) => {
       const k = a < b ? `${a}-${b}` : `${b}-${a}`
@@ -110,7 +132,7 @@ function VistaRutas({ ejecuciones }) {
       }
       return cache.get(k)
     }
-  }, [info])
+  }, [info, matriz.data])
 
   const resumen = generaciones.data?.[gen]
   const resumenPrevio = gen > 0 ? generaciones.data?.[gen - 1] : null
@@ -246,6 +268,7 @@ function VistaRutas({ ejecuciones }) {
               color={color}
               parametros={parametros}
               distancia={distancia}
+              metrica={matriz.data?.metrica ?? agente?.metrica ?? 'calles'}
               cerrada={cerrada}
               nNodos={ej.n_nodos ?? ej.hotspots?.length}
               numeroGrafo={ej.numero}
@@ -263,6 +286,8 @@ function VistaRutas({ ejecuciones }) {
                 info={info}
                 cerrada={cerrada}
                 nodos={ej.hotspots}
+                agente={agente}
+                rutaCalles={rutaCalles.data}
               />
             )}
           </div>
@@ -279,6 +304,8 @@ function VistaRutas({ ejecuciones }) {
                 info={info}
                 cerrada={cerrada}
                 nodos={ej.hotspots}
+                agente={agente}
+                rutaCalles={rutaCalles.data}
               />
             </div>
           )}
@@ -290,7 +317,23 @@ function VistaRutas({ ejecuciones }) {
   )
 }
 
-function Lateral({ resumen, mejorHistorico, mejoraTotal, generaciones, gen, total, color, info, cerrada, nodos }) {
+function Lateral({
+  resumen,
+  mejorHistorico,
+  mejoraTotal,
+  generaciones,
+  gen,
+  total,
+  color,
+  info,
+  cerrada,
+  nodos,
+  agente,
+  rutaCalles,
+}) {
+  // En la última generación el minimapa muestra la ruta final (pulida) dibujada por las calles reales
+  const final = gen === total && rutaCalles?.properties?.indices_paradas
+  const trazo = final ? rutaCalles.geometry.coordinates : null
   return (
     <aside className={s.lateral} aria-label="Evolución del agente">
       <div className={s.marcador}>
@@ -315,8 +358,77 @@ function Lateral({ resumen, mejorHistorico, mejoraTotal, generaciones, gen, tota
           )}
         </div>
       </div>
+      <TarjetaPulido agente={agente} info={info} />
       <GraficaAptitud generaciones={generaciones} hasta={gen} color={color} />
-      <MiniMapaRuta perm={resumen?.mejor_permutacion} info={info} color={color} cerrada={cerrada} nodos={nodos} />
+      <MiniMapaRuta
+        perm={resumen?.mejor_permutacion}
+        info={info}
+        color={color}
+        cerrada={cerrada}
+        nodos={nodos}
+        trazo={trazo}
+        ultima={total}
+      />
     </aside>
+  )
+}
+/**
+ * Versión solo-calles: el pulido final de la mejor ruta del genético (mover 1 a 3 hotspots seguidos sin
+ * voltearlos mientras la ruta se acorte por calles) y, como comparación, la misma ruta en línea recta.
+ */
+function TarjetaPulido({ agente, info }) {
+  if (!agente || agente.estado !== 'terminado') return null
+  const pul = agente.pulido
+  if (!pul) {
+    return (
+      <div className={s.pulido}>
+        <p className={s.pulidoTitulo}>Distancia en línea recta</p>
+        <p className={s.pulidoNota}>
+          Este agente se calculó antes de la versión por calles. Genera los agentes de nuevo para que optimicen por
+          calles, respetando los sentidos.
+        </p>
+      </div>
+    )
+  }
+  const ahorro = pul.antes_m - pul.despues_m
+  const codigo = (h) => (h == null ? 'el extremo' : (info.get(h)?.codigo ?? String(h)))
+  const movs = pul.movimientos ?? []
+  return (
+    <div className={s.pulido}>
+      <p className={s.pulidoTitulo}>Pulido final</p>
+      <dl className={s.pulidoCifras}>
+        <div>
+          <dt>Genético</dt>
+          <dd className="num">{fmtDistancia(pul.antes_m)}</dd>
+        </div>
+        <div>
+          <dt>Pulida, por calles</dt>
+          <dd className="num">{fmtDistancia(pul.despues_m)}</dd>
+        </div>
+        <div>
+          <dt>En línea recta</dt>
+          <dd className="num">{fmtDistancia(agente.distancia_recta_m)}</dd>
+        </div>
+      </dl>
+      <p className={s.pulidoNota}>
+        {movs.length
+          ? `${plural(movs.length, 'movimiento', 'movimientos')} sin voltear tramos: ${fmtDistancia(ahorro)} menos por calles (${fmtPct(ahorro / pul.antes_m)}).`
+          : 'Moviendo hotspots ya no se podía acortar la ruta del genético: el pulido no cambió nada.'}
+        {pul.invertida ? ' Además se recorre en sentido contrario, porque así es más corta por calles.' : ''}
+      </p>
+      {movs.length > 0 && (
+        <ol className={s.pulidoLista}>
+          {movs.slice(0, 4).map((m, i) => (
+            <li key={i}>
+              <span>
+                {m.segmento.map(codigo).join(' → ')} entre {codigo(m.entre[0])} y {codigo(m.entre[1])}
+              </span>
+              <span className="num">−{fmtDistancia(m.ahorro_m)}</span>
+            </li>
+          ))}
+          {movs.length > 4 && <li className={s.pulidoMas}>y {plural(movs.length - 4, 'movimiento más', 'movimientos más')}</li>}
+        </ol>
+      )}
+    </div>
   )
 }

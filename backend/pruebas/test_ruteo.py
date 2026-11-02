@@ -117,7 +117,7 @@ def test_se_pide_una_vez_y_se_guarda(con_tabla, corridos, osrm):
     assert ruteo.ruta_calles(con_tabla, e) == r and len(osrm.consultas) == n      # la segunda vez sale de la base
     p = r["properties"]
     a = S.agente(con_tabla, e)
-    assert p["distancia_recta_m"] == pytest.approx(a["mejor_distancia"])
+    assert p["distancia_recta_m"] == pytest.approx(a["distancia_recta_m"])          # guardada aparte
     assert p["distancia_m"] > p["distancia_recta_m"] and p["diferencia_pct"] > 0
     assert len(p["indices_paradas"]) == len(p["hotspots"]) + 1                   # ruta cerrada: regresa
     assert p["tramos"][0]["desde"] == p["hotspots"][0] and p["tramos"][-1]["hasta"] == p["hotspots"][0]

@@ -1,4 +1,11 @@
-"""Agentes (etapa 5): un algoritmo genético por grafo, guardado para que la vista Rutas lo reproduzca.
+"""Agentes (etapa 5; versión solo-calles, 1 nov 2026): un genético por grafo, guardado para la vista Rutas.
+
+Versión solo-calles (PLAN_SOLO_CALLES.md): el genético optimiza SOLO con la distancia por calles
+respetando sentidos (submatriz del sector en matriz_calles; de X a Y ≠ de Y a X), con mutación mixta,
+y al final se pule la mejor ruta (genetico.pulir, or-opt con sentido). Nunca se usa la línea recta
+para decidir: si no hay distancias por calles y el servidor de ruteo no responde, no se generan
+agentes (POST /api/agentes responde 503). La línea recta solo se guarda como comparación
+(`distancia_recta_m`).
 
 Flujo de POST /api/agentes:
   1. crear_ejecuciones(): una fila de ejecucion_ag por grafo de la partición, en estado «pendiente».
@@ -7,8 +14,9 @@ Flujo de POST /api/agentes:
           los agentes anteriores se les borran las rutas (individuo) y las operaciones de cada
           generación; se conservan ejecucion_ag (distancia, ruta óptima) y el resumen por generación
           (la curva de aptitud). El detalle se puede regenerar idéntico con la misma semilla.
-       b. un agente tras otro: «ejecutando» → genético (avance 0–85 %) → guardar() en UNA
-          transacción (85–100 %) → «terminado». Si algo falla, ese agente queda en «error» con su
+       b. la matriz por calles del análisis (normalmente ya guardada: POST /api/agentes la asegura).
+       c. un agente tras otro: «ejecutando» → genético con la submatriz por calles (avance 0–85 %) →
+          pulido final → guardar() en UNA transacción (85–100 %) → «terminado». Si algo falla, ese agente queda en «error» con su
           mensaje y se sigue con el siguiente.
   3. guardar(): escribe generacion e individuo con COPY y deja la ejecución terminada.
 
@@ -39,6 +47,33 @@ class Ocupado(RuntimeError):
 
 class NoTerminado(RuntimeError):
     """409: el agente todavía no tiene resultado."""
+
+
+class SinCalles(RuntimeError):
+    """503: no hay distancias por calles y el servidor de ruteo no respondió."""
+
+
+MENSAJE_SIN_CALLES = ("Todavía no están las distancias por calles de este análisis y no se pudieron pedir al "
+                      "servidor de ruteo ({motivo}). Conéctate a internet y vuelve a generar los agentes: solo "
+                      "hace falta una vez por análisis.")
+
+
+def asegurar_matriz(con, id_particion: int):
+    """La matriz por calles del análisis de la partición: de la base o, si falta, pedida a OSRM (≈ 2 s).
+
+    POST /api/agentes la llama antes de crear las ejecuciones, para avisar de inmediato si no hay
+    distancias por calles. Partición inexistente → None (crear_ejecuciones responde el 404).
+    """
+    from app.servicios import matriz_calles as M          # aquí y no arriba: ruteo importa este módulo
+    from app.servicios import ruteo
+    id_analisis = con.execute(text("SELECT id_analisis FROM particion_louvain WHERE id_particion = :p"),
+                              {"p": id_particion}).scalar()
+    if id_analisis is None:
+        return None
+    try:
+        return M.obtener(con, id_analisis)
+    except ruteo.RuteoNoDisponible as error:
+        raise SinCalles(MENSAJE_SIN_CALLES.format(motivo=str(error).rstrip("."))) from error
 
 
 # ------------------------------------------------------------------ crear
@@ -82,9 +117,18 @@ def ejecutar_agentes(ids_ejecucion: list[int], motor=None) -> None:
             _vacuum(motor)
     except Exception:
         log.exception("No se pudo liberar el detalle de las tandas anteriores")
+    try:
+        matriz = _matriz_de_la_tanda(ids_ejecucion, motor)
+    except Exception as error:                         # sin calles no hay agentes (nunca línea recta)
+        log.warning("Agentes sin distancias por calles: %s", error)
+        mensaje = str(error) if isinstance(error, SinCalles) else MENSAJE_SIN_CALLES.format(motivo=type(error).__name__)
+        with motor.begin() as con:
+            con.execute(text("UPDATE ejecucion_ag SET estado = 'error', mensaje_error = :m WHERE id_ejecucion = ANY(:t)"),
+                        {"m": mensaje, "t": list(ids_ejecucion)})
+        return
     for id_ejecucion in ids_ejecucion:
         try:
-            ejecutar_uno(id_ejecucion, motor)
+            ejecutar_uno(id_ejecucion, motor, matriz)
         except Exception as error:                     # un agente con error no detiene a los demás
             log.exception("Falló el agente %s", id_ejecucion)
             with motor.begin() as con:
@@ -93,7 +137,22 @@ def ejecutar_agentes(ids_ejecucion: list[int], motor=None) -> None:
                 """), {"e": id_ejecucion, "m": f"No se pudo calcular la ruta de este agente ({type(error).__name__}: {error})."})
 
 
-def ejecutar_uno(id_ejecucion: int, motor) -> None:
+def _matriz_de_la_tanda(ids_ejecucion: list[int], motor):
+    """La matriz por calles del análisis de la tanda (una vez por tanda). Lanza SinCalles si no hay."""
+    with motor.begin() as con:
+        particiones = con.execute(text("""
+            SELECT DISTINCT g.id_particion FROM ejecucion_ag e JOIN grafo g USING (id_grafo)
+            WHERE e.id_ejecucion = ANY(:t)
+        """), {"t": list(ids_ejecucion)}).scalars().all()
+        if len(particiones) != 1:
+            raise SinCalles("La tanda de agentes no corresponde a una sola partición.")
+        matriz = asegurar_matriz(con, particiones[0])
+    if matriz is None:
+        raise SinCalles("No existe la partición de estos agentes.")
+    return matriz
+
+
+def ejecutar_uno(id_ejecucion: int, motor, matriz) -> None:
     with motor.begin() as con:
         fila = con.execute(text("SELECT * FROM ejecucion_ag WHERE id_ejecucion = :e"), {"e": id_ejecucion}).mappings().one()
         p = AG.Parametros.desde(dict(fila))
@@ -106,16 +165,47 @@ def ejecutar_uno(id_ejecucion: int, motor) -> None:
             c.execute(text("UPDATE ejecucion_ag SET avance = :a WHERE id_ejecucion = :e"),
                       {"a": int(fraccion * AVANCE_GENETICO), "e": id_ejecucion})
 
-    r = AG.ejecutar_ag(ids, D, p, al_avanzar=avisar)
+    calles = matriz.submatrices(ids, recta=D)["calles"]           # de X a Y ≠ de Y a X
+    r = AG.ejecutar_ag(ids, calles, p, al_avanzar=avisar)
+    avisar(87 / AVANCE_GENETICO)                       # 87 %: pulido final
+    eleccion = pulir_ruta(ids, r, calles, D, p.ruta_cerrada)
     avisar(89 / AVANCE_GENETICO)                       # 89 %: guardando
     with motor.begin() as con:
-        guardar(con, id_ejecucion, fila["id_grafo"], r, hotspots)
-    log.info("Agente %s: %d hotspots, %.1f m (generación %d), %.1f s",
-             id_ejecucion, len(ids), r.mejor_distancia, r.generacion_mejor, r.duracion_s)
+        guardar(con, id_ejecucion, fila["id_grafo"], r, hotspots, eleccion)
+    pul = eleccion["pulido"]
+    log.info("Agente %s: %d hotspots · genético %.1f m (generación %d) · pulido %.1f m (%d movimientos) · "
+             "%.1f m en línea recta · %.1f s", id_ejecucion, len(ids), pul["antes_m"], r.generacion_mejor,
+             pul["despues_m"], len(pul["movimientos"]), eleccion["distancia_recta_m"], r.duracion_s)
+
+
+def pulir_ruta(ids: list[int], r: AG.Resultado, calles, recta, cerrada: bool) -> dict:
+    """Pulido final de la mejor ruta del genético y sus medidas (por calles con sentido y en línea recta).
+
+    Si recorrer el circuito al revés es más corto por calles, se guarda al revés («invertida»).
+    """
+    pos = {h: i for i, h in enumerate(ids)}
+    orden, movimientos = AG.pulir([pos[h] for h in r.ruta_optima], calles, cerrada)
+    metros = AG.largo(orden, calles, cerrada)
+    invertida = False
+    if cerrada and len(orden) > 2:
+        reves = orden[::-1]
+        d_reves = AG.largo(reves, calles, cerrada)
+        if d_reves < metros - 1e-6:
+            orden, metros, invertida = reves, d_reves, True
+    pulido = {
+        "antes_m": r.mejor_distancia,
+        "despues_m": round(metros, 1),
+        "invertida": invertida,
+        "movimientos": [{"segmento": [ids[k] for k in m["segmento"]],
+                         "entre": [None if x is None else ids[x] for x in m["entre"]],
+                         "ahorro_m": m["ahorro_m"]} for m in movimientos],
+    }
+    return {"ruta": [ids[k] for k in orden], "mejor_distancia": round(metros, 1),
+            "distancia_recta_m": round(AG.largo(orden, recta, cerrada), 1), "metrica": "calles", "pulido": pulido}
 
 
 def datos_grafo(con, id_grafo: int):
-    """ids (por etiqueta), matriz de distancias de la tabla arista e info de cada hotspot."""
+    """ids (por etiqueta), matriz en LÍNEA RECTA de la tabla arista (solo para comparar) e info de cada hotspot."""
     hotspots = [dict(h) for h in con.execute(text("""
         SELECT h.id_hotspot, h.etiqueta, h.codigo, h.n_puntos, h.indice_gravedad, h.lat_centroide, h.lon_centroide
         FROM nodo_grafo n JOIN hotspot h USING (id_hotspot)
@@ -133,8 +223,11 @@ def datos_grafo(con, id_grafo: int):
 
 
 # ------------------------------------------------------------------ guardar
-def guardar(con, id_ejecucion: int, id_grafo: int, r: AG.Resultado, hotspots: list[dict]) -> None:
-    """generacion + individuo con COPY y ejecución terminada. No hace commit."""
+def guardar(con, id_ejecucion: int, id_grafo: int, r: AG.Resultado, hotspots: list[dict], eleccion: dict) -> None:
+    """generacion + individuo con COPY y ejecución terminada. No hace commit.
+
+    eleccion (de pulir_ruta): ruta pulida, mejor_distancia por calles, distancia_recta_m, metrica y pulido.
+    """
     G = len(r.generaciones)
     ids_gen = _reservar(con, "generacion", "id_generacion", G)
     tamanos = [len(g.distancia) for g in r.generaciones]
@@ -159,15 +252,19 @@ def guardar(con, id_ejecucion: int, id_grafo: int, r: AG.Resultado, hotspots: li
                                      round(float(gen.distancia[i]), 1), AG.ORIGENES[gen.origen[i]],
                                      previos[p1] if p1 >= 0 else None, previos[p2] if p2 >= 0 else None))
                 previos, inicio = propios, inicio + tamanos[g]
-    ruta = r.ruta_optima
+    e = eleccion
+    ruta = list(e["ruta"])
     if r.parametros.ruta_cerrada:                       # empieza en el hotspot de mayor carga (no cambia la distancia)
         ruta = AG.presentar_ruta(ruta, AG.prioridad_hotspots(hotspots))
     con.execute(text("""
         UPDATE ejecucion_ag
         SET estado = 'terminado', avance = 100, mejor_distancia = :d, ruta_optima = CAST(:ruta AS jsonb),
-            generacion_mejor = :gm, duracion_s = :t, mensaje_error = NULL
+            generacion_mejor = :gm, duracion_s = :t, mensaje_error = NULL,
+            metrica = :m, distancia_recta_m = :dr, pulido = CAST(:pul AS jsonb)
         WHERE id_ejecucion = :e
-    """), {"e": id_ejecucion, "d": r.mejor_distancia, "ruta": json.dumps(ruta), "gm": r.generacion_mejor, "t": r.duracion_s})
+    """), {"e": id_ejecucion, "d": e["mejor_distancia"], "ruta": json.dumps(ruta), "gm": r.generacion_mejor,
+           "t": r.duracion_s, "m": e["metrica"], "dr": e["distancia_recta_m"],
+           "pul": None if e["pulido"] is None else json.dumps(e["pulido"])})
 
 
 def liberar_tandas_anteriores(con, tanda: list[int]) -> dict:
@@ -249,6 +346,8 @@ def agente(con, id_ejecucion: int) -> dict:
         "mejor_distancia": e["mejor_distancia"], "ruta_optima": e["ruta_optima"],
         "generacion_mejor": e["generacion_mejor"], "duracion_s": e["duracion_s"], "mensaje_error": e["mensaje_error"],
         "parametros": {k: e[k] for k in PARAMETROS},
+        # versión solo-calles: con qué se midió, la ruta en línea recta (comparación) y el pulido final
+        "metrica": e["metrica"], "distancia_recta_m": e["distancia_recta_m"], "pulido": e["pulido"],
     }
 
 
@@ -310,8 +409,34 @@ def ruta(con, id_ejecucion: int) -> dict:
             "id_ejecucion": e["id_ejecucion"], "numero_grafo": e["numero"], "color": e["color"],
             "distancia_m": e["mejor_distancia"], "orden": [info[h]["codigo"] for h in orden], "hotspots": orden,
             "ruta_cerrada": e["ruta_cerrada"], "generacion_mejor": e["generacion_mejor"],
+            "metrica": e["metrica"], "distancia_recta_m": e["distancia_recta_m"],
         },
     }
+
+
+def distancias(con, id_ejecucion: int) -> dict:
+    """GET /api/agentes/{id}/distancias: la matriz con la que el genético midió las rutas de este agente.
+
+    Para que Rutas muestre los metros de cada tramo con la misma vara. ids en el orden de las filas;
+    distancias_m[i][j] = de ids[i] a ids[j] (por calles, ida y vuelta pueden ser distintas).
+    Agentes anteriores a la versión solo-calles (metrica «recta»): la matriz en línea recta.
+    """
+    from app.servicios import matriz_calles as M
+    e = _ejecucion(con, id_ejecucion)
+    _terminado(e)
+    ids, D, _ = datos_grafo(con, e["id_grafo"])
+    metrica = e["metrica"] or "recta"
+    if metrica == "calles":
+        id_analisis = con.execute(text("""
+            SELECT p.id_analisis FROM grafo g JOIN particion_louvain p USING (id_particion) WHERE g.id_grafo = :g
+        """), {"g": e["id_grafo"]}).scalar_one()
+        m = M.obtener(con, id_analisis, pedir=False)
+        if m is None:
+            raise NoEncontrado("Las distancias por calles de este análisis ya no están guardadas. "
+                               "Vuelve a generar los agentes.")
+        D = m.submatrices(ids, recta=D)["calles"]
+    return {"id_ejecucion": e["id_ejecucion"], "metrica": metrica, "ids": ids,
+            "distancias_m": [[round(float(x), 1) for x in fila] for fila in D]}
 
 
 def registrar_simulacion(con, id_ejecucion: int, distancia_total: float | None, duracion_s: float | None) -> dict:

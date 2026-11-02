@@ -55,7 +55,8 @@ export const PARAMETROS_AG = {
   prob_cruce: 0.9,
   prob_mutacion: 0.5,
   op_cruce: 'OX',
-  op_mutacion: 'inversion',
+  /** Versión solo-calles: mixta (inversión o inserción), la que respeta el sentido de las calles */
+  op_mutacion: 'mixta',
   semilla: 42,
   ruta_cerrada: true,
 }
@@ -98,8 +99,13 @@ export const useSesion = create(
       name: 'ttr-sesion',
       // Versión 2: nuevos valores por defecto del genético. Una sesión guardada con la versión 1
       // recibe los parámetros nuevos sin tener que pulsar «Restablecer valores».
-      version: 2,
-      migrate: (estado, version) => (version < 2 ? { ...estado, parametros: PARAMETROS_AG } : estado),
+      // Versión 3 (solo calles): la mutación por omisión pasa a «mixta».
+      version: 3,
+      migrate: (estado, version) => {
+        if (version < 2) return { ...estado, parametros: PARAMETROS_AG }
+        if (version < 3) return { ...estado, parametros: { ...estado.parametros, op_mutacion: 'mixta' } }
+        return estado
+      },
       storage: createJSONStorage(() => almacenSeguro),
     },
   ),

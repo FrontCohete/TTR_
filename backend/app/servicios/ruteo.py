@@ -1,7 +1,7 @@
 """Trazo por calles para la vista Simular (etapa 6).
 
-El genético decide el ORDEN de visita con distancias en línea recta (haversine). Aquí solo se
-DIBUJA ese orden por calles reales, pidiéndole el trazo a un servidor OSRM:
+El genético decide el ORDEN de visita con las distancias por calles con sentido (matriz_calles.py).
+Aquí solo se DIBUJA ese orden por calles reales, pidiéndole el trazo a un servidor OSRM:
 
   * Proveedor: OSRM (Open Source Routing Machine) con datos de OpenStreetMap. Por defecto el servidor
     público de demostración (router.project-osrm.org): gratis, sin clave y sin garantías, con uso
@@ -175,7 +175,7 @@ def ruta_calles(con, id_ejecucion: int, trazar_fn=None) -> dict:
     if len(orden) == 1:
         paradas = [orden[0], orden[0]]
     tramos = [{"desde": paradas[i], "hasta": paradas[i + 1], **t} for i, t in enumerate(fila["tramos"])]
-    recta_m = float(p["distancia_m"] or 0)
+    recta_m = float(p.get("distancia_recta_m") or p["distancia_m"] or 0)   # solo-calles: guardada aparte
     calles_m = float(fila["distancia_m"])
     return {
         "type": "Feature",

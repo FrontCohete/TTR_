@@ -59,9 +59,10 @@ def test_inversion_e_intercambio():
 
 
 # ------------------------------------------------------------------ contrato con la vista Rutas
-def test_contrato_generacion_por_generacion():
+@pytest.mark.parametrize("op", ["mixta", "inversion", "insercion", "swap"])
+def test_contrato_generacion_por_generacion(op):
     ids, D = grafo(12)
-    p = AG.Parametros(tam_poblacion=20, n_generaciones=40, tam_torneo=5)
+    p = AG.Parametros(tam_poblacion=20, n_generaciones=40, tam_torneo=5, op_mutacion=op)
     r = AG.ejecutar_ag(ids, D, p)
     H = p.tam_poblacion - p.n_elite
     assert len(r.generaciones) == len(r.resumen) == p.n_generaciones + 1
@@ -80,9 +81,17 @@ def test_contrato_generacion_por_generacion():
             A, B = previa[c["padres"][0]]["permutacion"], previa[c["padres"][1]]["permutacion"]
             esperado = AG.cruce_ox(A, B, *c["puntos_corte"]) if c["aplicado"] else A
             hijo = actual[h]["permutacion"]
-            if h in muts:          # la vista Rutas deshace la mutación así
+            if h in muts:          # la vista Rutas deshace la mutación así, según su tipo real
                 a, b = muts[h]["posiciones"]
-                hijo = AG.invertir(hijo, a, b)
+                tipo = muts[h]["tipo"]
+                assert tipo == (AG.tipo_mixta(a, b) if p.op_mutacion == "mixta" else p.op_mutacion)
+                if tipo == "inversion":
+                    hijo = AG.invertir(hijo, a, b)
+                elif tipo == "insercion":
+                    hijo = list(hijo)
+                    hijo.insert(a, hijo.pop(b))
+                else:
+                    hijo = AG.intercambiar(hijo, a, b)
                 assert actual[h]["origen"] == "mutacion"
             else:
                 assert actual[h]["origen"] == "cruce"
@@ -182,7 +191,7 @@ def test_parametros_invalidos(cambio, texto):
 def test_valores_por_omision_acordados():
     p = AG.Parametros()
     assert (p.tam_poblacion, p.n_generaciones, p.tam_torneo, p.prob_cruce, p.prob_mutacion,
-            p.op_cruce, p.op_mutacion, p.n_elite, p.ruta_cerrada) == (100, 1000, 5, 0.9, 0.5, "OX", "inversion", 1, True)
+            p.op_cruce, p.op_mutacion, p.n_elite, p.ruta_cerrada) == (100, 1000, 5, 0.9, 0.5, "OX", "mixta", 1, True)
     assert AG.Parametros.desde({"tam_poblacion": 80, "otra_cosa": 1}).tam_poblacion == 80
 
 

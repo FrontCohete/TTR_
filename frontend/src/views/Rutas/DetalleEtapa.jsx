@@ -72,6 +72,11 @@ function NotaElite({ actual }) {
 const antesDeMutar = (perm, mut) => {
   const [a, b] = mut.posiciones
   if (mut.tipo === 'inversion') return [...perm.slice(0, a), ...perm.slice(a, b + 1).reverse(), ...perm.slice(b + 1)]
+  if (mut.tipo === 'insercion') {
+    const r = perm.slice()
+    r.splice(a, 0, r.splice(b, 1)[0]) // el hotspot que llegó a la posición b regresa a la a
+    return r
+  }
   const r = perm.slice()
   ;[r[a], r[b]] = [r[b], r[a]]
   return r
@@ -87,6 +92,7 @@ export default function DetalleEtapa({
   color,
   parametros,
   distancia,
+  metrica = 'calles',
   cerrada,
   nNodos,
   numeroGrafo,
@@ -127,7 +133,16 @@ export default function DetalleEtapa({
       />
     )
   } else if (pos.etapa === 1) {
-    contenido = <Evaluacion actual={actual} info={info} color={color} distancia={distancia} cerrada={cerrada} />
+    contenido = (
+      <Evaluacion
+        actual={actual}
+        info={info}
+        color={color}
+        distancia={distancia}
+        metrica={metrica}
+        cerrada={cerrada}
+      />
+    )
   } else if (pos.etapa === 2) {
     contenido = (
       <SeleccionAzar
@@ -295,13 +310,21 @@ function Permutacion({ actual, info, color, cerrada, nNodos, P, numeroGrafo }) {
 }
 
 // ---------------------------------------------------------------- 2 · Función objetivo
-function Evaluacion({ actual, info, color, distancia, cerrada }) {
+function Evaluacion({ actual, info, color, distancia, metrica, cerrada }) {
   const mejor = actual.individuos.reduce((m, x) => (x.distancia < m.distancia ? x : m), actual.individuos[0])
   return (
     <>
       <p className={s.explicacion}>
-        La aptitud de una ruta es su <strong>distancia total</strong>: la suma de los tramos en línea recta entre
-        hotspots consecutivos{cerrada ? ', más el regreso al primero' : ''}. Menos distancia es mejor.
+        La aptitud de una ruta es su <strong>distancia total</strong>:{' '}
+        {metrica === 'recta' ? (
+          <>la suma de los tramos en línea recta entre hotspots consecutivos</>
+        ) : (
+          <>
+            la suma de los tramos <strong>por calles</strong> entre hotspots consecutivos, cada uno en la dirección en
+            que se recorre (ir de un hotspot a otro puede medir distinto que regresar, por las calles de un sentido)
+          </>
+        )}
+        {cerrada ? ', más el regreso al primero' : ''}. Menos distancia es mejor.
       </p>
       <p className={s.formula} aria-label="Fórmula de la función objetivo">
         f(π) = d(π<sub>1</sub>, π<sub>2</sub>) + d(π<sub>2</sub>, π<sub>3</sub>) + … +{' '}
@@ -326,7 +349,10 @@ function Evaluacion({ actual, info, color, distancia, cerrada }) {
           cerrada={cerrada}
           tramos={tramosDe(mejor.permutacion, distancia, cerrada)}
         />
-        <p className={s.notaPequena}>Los números bajo la línea son los kilómetros de cada tramo.</p>
+        <p className={s.notaPequena}>
+          Los números bajo la línea son los kilómetros de cada tramo
+          {metrica === 'recta' ? ', en línea recta.' : ', por calles y en ese sentido.'}
+        </p>
       </div>
       <BarrasAptitud individuos={actual.individuos} color={color} />
     </>
@@ -537,18 +563,29 @@ function Mutacion({ actual, indice, setIndice, info, color, cerrada, parametros 
     return () => clearTimeout(t)
   }, [indice, actual.numero])
 
-  const esInversion = parametros.op_mutacion === 'inversion'
+  const op = parametros.op_mutacion
+  const prob = fmtPct(parametros.prob_mutacion)
   const explicacion = (
     <p className={s.explicacion}>
-      {esInversion ? (
+      {op === 'mixta' ? (
         <>
-          <strong>Mutación por inversión:</strong> con probabilidad {fmtPct(parametros.prob_mutacion)} se invierte el
-          orden de un tramo de la ruta.
+          <strong>Mutación mixta:</strong> con probabilidad {prob} un hijo muta. Se sortean dos posiciones: si suman par
+          se <strong>invierte</strong> el tramo entre ellas; si suman impar, el hotspot de la primera se{' '}
+          <strong>inserta</strong> en la segunda. La inserción no voltea ningún tramo, así que respeta el sentido de las
+          calles.
+        </>
+      ) : op === 'inversion' ? (
+        <>
+          <strong>Mutación por inversión:</strong> con probabilidad {prob} se invierte el orden de un tramo de la ruta.
+        </>
+      ) : op === 'insercion' ? (
+        <>
+          <strong>Mutación por inserción:</strong> con probabilidad {prob} un hotspot sale de su lugar y entra más
+          adelante; ningún tramo se voltea.
         </>
       ) : (
         <>
-          <strong>Mutación por intercambio:</strong> con probabilidad {fmtPct(parametros.prob_mutacion)} dos hotspots de
-          la ruta cambian de lugar.
+          <strong>Mutación por intercambio:</strong> con probabilidad {prob} dos hotspots de la ruta cambian de lugar.
         </>
       )}{' '}
       Así la población no se vuelve idéntica y puede explorar rutas nuevas.
@@ -565,7 +602,14 @@ function Mutacion({ actual, indice, setIndice, info, color, cerrada, parametros 
   const despues = actual.individuos[m.individuo].permutacion
   const antes = antesDeMutar(despues, m)
   const [a, b] = m.posiciones
-  const marcadas = new Set(esInversion ? Array.from({ length: b - a + 1 }, (_, k) => a + k) : [a, b])
+  const tipo = m.tipo ?? op
+  const marcadas = new Set(
+    tipo === 'inversion'
+      ? Array.from({ length: b - a + 1 }, (_, k) => a + k)
+      : tipo === 'insercion'
+        ? [mostrarDespues ? b : a] // el hotspot que se mueve
+        : [a, b],
+  )
   return (
     <>
       {explicacion}
@@ -578,9 +622,12 @@ function Mutacion({ actual, indice, setIndice, info, color, cerrada, parametros 
       <div className={s.mutacion}>
         <p className={s.destacadoTitulo}>
           Hijo #{m.individuo}:{' '}
-          {esInversion
+          {tipo === 'inversion'
             ? `se invierte de la posición ${a + 1} a la ${b + 1}`
-            : `se intercambian las posiciones ${a + 1} y ${b + 1}`}
+            : tipo === 'insercion'
+              ? `el hotspot de la posición ${a + 1} se inserta en la posición ${b + 1}`
+              : `se intercambian las posiciones ${a + 1} y ${b + 1}`}
+          {op === 'mixta' && <span className={s.notaPequena}> (mixta: {a + 1} + {b + 1} es {(a + b) % 2 === 0 ? 'par' : 'impar'})</span>}
         </p>
         <TiraRuta
           perm={mostrarDespues ? despues : antes}
