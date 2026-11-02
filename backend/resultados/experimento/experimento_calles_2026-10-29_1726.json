@@ -1,0 +1,190 @@
+{
+ "analisis": 3,
+ "semillas": [
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9,
+  10
+ ],
+ "rodeo": {
+  "pares": 8738,
+  "p10": 1.2133166260634733,
+  "mediana": 1.4000951486966584,
+  "p90": 1.714634017777169,
+  "cv": 0.1888052085925366,
+  "asimetria_mediana": 0.07802080297676658
+ },
+ "resumen": [
+  {
+   "N": 1,
+   "grafo": 1,
+   "nodos": 94,
+   "A_calles_km": 138.87877000000003,
+   "B_calles_km": 159.82605999999998,
+   "mejora_pct": -15.113765807332676,
+   "mejora_min": -21.745159012168493,
+   "mejora_max": -4.514375195920817,
+   "mismo_orden": 0
+  },
+  {
+   "N": 2,
+   "grafo": 1,
+   "nodos": 19,
+   "A_calles_km": 23.85326,
+   "B_calles_km": 22.88018,
+   "mejora_pct": 4.047676800215037,
+   "mejora_min": 0.35081130448885167,
+   "mejora_max": 6.666803590133297,
+   "mismo_orden": 0
+  },
+  {
+   "N": 2,
+   "grafo": 2,
+   "nodos": 75,
+   "A_calles_km": 113.35833000000001,
+   "B_calles_km": 126.93804000000002,
+   "mejora_pct": -12.333527835171644,
+   "mejora_min": -34.05176820748173,
+   "mejora_max": 5.372220980940845,
+   "mismo_orden": 0
+  },
+  {
+   "N": 3,
+   "grafo": 1,
+   "nodos": 19,
+   "A_calles_km": 23.85326,
+   "B_calles_km": 22.88018,
+   "mejora_pct": 4.047676800215037,
+   "mejora_min": 0.35081130448885167,
+   "mejora_max": 6.666803590133297,
+   "mismo_orden": 0
+  },
+  {
+   "N": 3,
+   "grafo": 2,
+   "nodos": 26,
+   "A_calles_km": 45.597559999999994,
+   "B_calles_km": 42.04379,
+   "mejora_pct": 7.3248996155124955,
+   "mejora_min": -2.5629886017783265,
+   "mejora_max": 16.69315713703202,
+   "mismo_orden": 0
+  },
+  {
+   "N": 3,
+   "grafo": 3,
+   "nodos": 49,
+   "A_calles_km": 71.62451000000001,
+   "B_calles_km": 71.5822,
+   "mejora_pct": -0.2539639112801706,
+   "mejora_min": -7.823872922084285,
+   "mejora_max": 14.32219221288371,
+   "mismo_orden": 0
+  },
+  {
+   "N": 4,
+   "grafo": 1,
+   "nodos": 19,
+   "A_calles_km": 23.85326,
+   "B_calles_km": 22.88018,
+   "mejora_pct": 4.047676800215037,
+   "mejora_min": 0.35081130448885167,
+   "mejora_max": 6.666803590133297,
+   "mismo_orden": 0
+  },
+  {
+   "N": 4,
+   "grafo": 2,
+   "nodos": 22,
+   "A_calles_km": 30.26108,
+   "B_calles_km": 29.423779999999997,
+   "mejora_pct": 2.7750553717017024,
+   "mejora_min": -2.403424995883463,
+   "mejora_max": 9.838300675119383,
+   "mismo_orden": 0
+  },
+  {
+   "N": 4,
+   "grafo": 3,
+   "nodos": 26,
+   "A_calles_km": 45.597559999999994,
+   "B_calles_km": 42.04379,
+   "mejora_pct": 7.3248996155124955,
+   "mejora_min": -2.5629886017783265,
+   "mejora_max": 16.69315713703202,
+   "mismo_orden": 0
+  },
+  {
+   "N": 4,
+   "grafo": 4,
+   "nodos": 27,
+   "A_calles_km": 38.63583,
+   "B_calles_km": 36.85757,
+   "mejora_pct": 4.475294442043034,
+   "mejora_min": -1.792080710005295,
+   "mejora_max": 10.219638787560159,
+   "mismo_orden": 0
+  },
+  {
+   "N": 5,
+   "grafo": 1,
+   "nodos": 19,
+   "A_calles_km": 23.85326,
+   "B_calles_km": 22.88018,
+   "mejora_pct": 4.047676800215037,
+   "mejora_min": 0.35081130448885167,
+   "mejora_max": 6.666803590133297,
+   "mismo_orden": 0
+  },
+  {
+   "N": 5,
+   "grafo": 2,
+   "nodos": 8,
+   "A_calles_km": 18.647170000000003,
+   "B_calles_km": 17.045499999999997,
+   "mejora_pct": 8.353725589113882,
+   "mejora_min": 1.0966375583858157,
+   "mejora_max": 11.463906173711635,
+   "mismo_orden": 0
+  },
+  {
+   "N": 5,
+   "grafo": 3,
+   "nodos": 22,
+   "A_calles_km": 30.26108,
+   "B_calles_km": 29.423779999999997,
+   "mejora_pct": 2.7750553717017024,
+   "mejora_min": -2.403424995883463,
+   "mejora_max": 9.838300675119383,
+   "mismo_orden": 0
+  },
+  {
+   "N": 5,
+   "grafo": 4,
+   "nodos": 27,
+   "A_calles_km": 38.63583,
+   "B_calles_km": 36.85757,
+   "mejora_pct": 4.475294442043034,
+   "mejora_min": -1.792080710005295,
+   "mejora_max": 10.219638787560159,
+   "mismo_orden": 0
+  },
+  {
+   "N": 5,
+   "grafo": 5,
+   "nodos": 18,
+   "A_calles_km": 28.13559,
+   "B_calles_km": 24.21698,
+   "mejora_pct": 13.905813123737687,
+   "mejora_min": 10.804258731619331,
+   "mejora_max": 16.843588736818504,
+   "mismo_orden": 0
+  }
+ ]
+}

@@ -14,7 +14,7 @@ dist/
 
 # --- Datos y salidas que se regeneran ---
 backend/cargas/
-backend/resultados/
+backend/resultados/*
 database/fuentes/
 *.csv
 *.xlsx
@@ -27,3 +27,12 @@ mapa_*.html
 Thumbs.db
 desktop.ini
 .DS_Store
+
+   
+# --- Evidencias de la tesis (sí se versionan) ---
+!backend/resultados/analisis_13.json
+!backend/resultados/grafos/
+!backend/resultados/experimento/
+!backend/resultados/validacion/
+!backend/resultados/experimento/*.csv
+!backend/resultados/validacion/*.csv

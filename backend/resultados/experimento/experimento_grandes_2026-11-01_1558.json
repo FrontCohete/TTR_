@@ -1,0 +1,68 @@
+{
+ "analisis": 13,
+ "semillas": [
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9,
+  10
+ ],
+ "resumen": [
+  {
+   "N": 1,
+   "sector": 1,
+   "nodos": 93,
+   "ref_km": 132.73897,
+   "mixta_km": 143.06887,
+   "siembra_km": 134.29124,
+   "busqueda_km": 132.39342000000002,
+   "pulido_km": 129.61017,
+   "siembra_pulido_km": 128.88448,
+   "ref_seg": 2.8760000000000003,
+   "mixta_seg": 2.845,
+   "siembra_seg": 2.903,
+   "busqueda_seg": 2.958,
+   "pulido_seg": 2.966,
+   "siembra_pulido_seg": 2.938
+  },
+  {
+   "N": 2,
+   "sector": 1,
+   "nodos": 18,
+   "ref_km": 22.18989,
+   "mixta_km": 22.065369999999998,
+   "siembra_km": 21.99148,
+   "busqueda_km": 22.111579999999996,
+   "pulido_km": 22.065369999999998,
+   "siembra_pulido_km": 21.99148,
+   "ref_seg": 1.544,
+   "mixta_seg": 1.489,
+   "siembra_seg": 1.492,
+   "busqueda_seg": 1.51,
+   "pulido_seg": 1.461,
+   "siembra_pulido_seg": 1.478
+  },
+  {
+   "N": 2,
+   "sector": 2,
+   "nodos": 75,
+   "ref_km": 105.62101,
+   "mixta_km": 113.42754000000001,
+   "siembra_km": 108.38843,
+   "busqueda_km": 103.87834,
+   "pulido_km": 103.12889,
+   "siembra_pulido_km": 104.79171000000001,
+   "ref_seg": 2.516,
+   "mixta_seg": 2.525,
+   "siembra_seg": 2.536,
+   "busqueda_seg": 2.594,
+   "pulido_seg": 2.575,
+   "siembra_pulido_seg": 2.523
+  }
+ ]
+}

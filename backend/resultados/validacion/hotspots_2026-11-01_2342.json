@@ -1,0 +1,194 @@
+{
+ "analisis": 13,
+ "delitos": 54045,
+ "hotspots": 93,
+ "area_km2": 87.83363833819527,
+ "simulaciones": 99,
+ "clark_evans": {
+  "n": 54045,
+  "r_obs_m": 12.8349246097668,
+  "r_esp_m": 20.15685075439785,
+  "R": 0.6367524751834786,
+  "z": -161.55161619218822,
+  "duplicados_pct": 7.854565639744656,
+  "p_monte_carlo": 0.01,
+  "R_azar_min": 0.9985909102707091,
+  "R_azar_max": 1.0104069427617868
+ },
+ "clark_evans_unicos": {
+  "n": 51713,
+  "r_obs_m": 13.934521873061646,
+  "r_esp_m": 20.606326381863123,
+  "R": 0.6762254278048446,
+  "z": -140.85539556165244,
+  "duplicados_pct": 0.0,
+  "p_monte_carlo": 0.01,
+  "R_azar_min": 0.998983313335462,
+  "R_azar_max": 1.0099362636827507
+ },
+ "barrido": {
+  "p_minimo": 0.01,
+  "significativos_p_minimo": 57,
+  "significativos_05": 57,
+  "veces_esperado_mediana": 1.4416428245027229,
+  "veces_max_azar_mediana": 1.0789473684210527,
+  "no_significativos": [
+   "H-02",
+   "H-03",
+   "H-05",
+   "H-07",
+   "H-10",
+   "H-12",
+   "H-14",
+   "H-15",
+   "H-23",
+   "H-27",
+   "H-28",
+   "H-29",
+   "H-31",
+   "H-34",
+   "H-37",
+   "H-38",
+   "H-48",
+   "H-49",
+   "H-61",
+   "H-65",
+   "H-67",
+   "H-68",
+   "H-72",
+   "H-74",
+   "H-76",
+   "H-77",
+   "H-78",
+   "H-80",
+   "H-81",
+   "H-83",
+   "H-84",
+   "H-85",
+   "H-87",
+   "H-90",
+   "H-92",
+   "H-93"
+  ]
+ },
+ "hdbscan_azar": [
+  {
+   "semilla": 1,
+   "hotspots": 3,
+   "ruido_pct": 20.432972522897586,
+   "mayor": 42667
+  },
+  {
+   "semilla": 2,
+   "hotspots": 97,
+   "ruido_pct": 54.69701174946804,
+   "mayor": 820
+  },
+  {
+   "semilla": 3,
+   "hotspots": 108,
+   "ruido_pct": 52.56730502359145,
+   "mayor": 812
+  },
+  {
+   "semilla": 4,
+   "hotspots": 94,
+   "ruido_pct": 51.89379221019521,
+   "mayor": 2315
+  },
+  {
+   "semilla": 5,
+   "hotspots": 91,
+   "ruido_pct": 53.522064945878434,
+   "mayor": 766
+  },
+  {
+   "semilla": 6,
+   "hotspots": 91,
+   "ruido_pct": 49.92506244796003,
+   "mayor": 1051
+  },
+  {
+   "semilla": 7,
+   "hotspots": 97,
+   "ruido_pct": 51.88824128041447,
+   "mayor": 1016
+  },
+  {
+   "semilla": 8,
+   "hotspots": 96,
+   "ruido_pct": 51.48117309649366,
+   "mayor": 1642
+  },
+  {
+   "semilla": 9,
+   "hotspots": 2,
+   "ruido_pct": 13.464705338144139,
+   "mayor": 46668
+  },
+  {
+   "semilla": 10,
+   "hotspots": 92,
+   "ruido_pct": 53.38884263114072,
+   "mayor": 1566
+  },
+  {
+   "semilla": 11,
+   "hotspots": 104,
+   "ruido_pct": 52.7190304375983,
+   "mayor": 731
+  },
+  {
+   "semilla": 12,
+   "hotspots": 101,
+   "ruido_pct": 54.18817651956703,
+   "mayor": 1196
+  },
+  {
+   "semilla": 13,
+   "hotspots": 100,
+   "ruido_pct": 51.022296234619304,
+   "mayor": 1543
+  },
+  {
+   "semilla": 14,
+   "hotspots": 101,
+   "ruido_pct": 50.681839208067345,
+   "mayor": 942
+  },
+  {
+   "semilla": 15,
+   "hotspots": 96,
+   "ruido_pct": 53.56462207419743,
+   "mayor": 2060
+  },
+  {
+   "semilla": 16,
+   "hotspots": 92,
+   "ruido_pct": 54.441668979554066,
+   "mayor": 1303
+  },
+  {
+   "semilla": 17,
+   "hotspots": 105,
+   "ruido_pct": 52.798593764455546,
+   "mayor": 931
+  },
+  {
+   "semilla": 18,
+   "hotspots": 111,
+   "ruido_pct": 52.05846979369044,
+   "mayor": 1224
+  },
+  {
+   "semilla": 19,
+   "hotspots": 101,
+   "ruido_pct": 53.74040151725414,
+   "mayor": 1163
+  }
+ ],
+ "parametros_hdbscan": {
+  "min_cluster_size": 100,
+  "min_samples": 10
+ }
+}
